@@ -59,5 +59,10 @@ Route::middleware('cors:api')->group(function (){
 			Route::post('/logout','UserController@logout');
 		});
 	});
+
+	Route::middleware('auth:api')->prefix('admin')->group(function () {
+		Route::get('/orders','OrderController@get');
+	});	
+
 });
 
