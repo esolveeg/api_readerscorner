@@ -24,6 +24,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(Address::class);
     }
+
+    public function scopeAdmin($query)
+    {
+        return $query->where('admin' ,true);
+    }
     public function AauthAcessToken(){
         return $this->hasMany('\App\OauthAccessToken');
     }

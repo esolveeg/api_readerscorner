@@ -1,6 +1,6 @@
 <?php
 
-namespace App\QueryFilters;
+namespace App\QueryFilters\product;
 
 use Closure;
 

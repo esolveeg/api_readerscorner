@@ -16,9 +16,12 @@ class CreateStockTable extends Migration
         Schema::create('stock', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('product_id');
-            $table->foreign('product_id')->references('id')->on('products');
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
 
-            $table->unsignedTinyInteger('qty')->default(1);
+            $table->unsignedBigInteger('branch_id');
+            $table->foreign('branch_id')->references('id')->on('branches')->default(1)->onDelete('cascade');
+
+            $table->tinyInteger('qty')->default(1);
             $table->timestamps();
         });
     }

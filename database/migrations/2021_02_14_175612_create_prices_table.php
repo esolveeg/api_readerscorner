@@ -17,8 +17,11 @@ class CreatePricesTable extends Migration
             $table->id();
             $table->unsignedFloat('price');
             $table->unsignedFloat('old_price')->nullable();
+            $table->unsignedFloat('purchased_price')->nullable();
             $table->unsignedBigInteger('product_id');
-            $table->foreign('product_id')->references('id')->on('products');
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
+            $table->unsignedBigInteger('branch_id')->nullable();
+            $table->foreign('branch_id')->references('id')->on('branches')->default(1)->onDelete('cascade');
             $table->timestamps();
         });
     }

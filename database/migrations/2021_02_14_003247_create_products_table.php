@@ -20,11 +20,14 @@ class CreateProductsTable extends Migration
             $table->string('thumbnail')->nullable();
             $table->string('image')->nullable();
             $table->string('isbn')->unique();
-            $table->longtext('description')->nullale();
+            $table->longtext('description')->nullable();
             $table->longtext('details')->nullable();
             $table->unsignedBigInteger('author_id')->nullable();
             $table->unsignedBigInteger('language_id')->nullable();
             $table->unsignedBigInteger('age_id')->nullable();
+            $table->unsignedFloat('price');
+            $table->unsignedFloat('old_price')->nullable();
+            $table->boolean('website')->default(true);
             $table->foreign('author_id')->references('id')->on('authors');
             $table->foreign('language_id')->references('id')->on('languages');
             $table->foreign('age_id')->references('id')->on('ages');

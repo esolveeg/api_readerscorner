@@ -16,6 +16,7 @@ class KeyProductSeeder extends Seeder
     {
         $products = Product::limit(12)->orderBy('id')->pluck('id');
         foreach($products as $product){
+            // dd($product);
             keyProduct::create([
                 'product_id' => $product,
                 'key_id' => 1,

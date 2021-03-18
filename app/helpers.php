@@ -2,13 +2,27 @@
 
 use App\Author;
 use App\City;
+use App\Coupon;
 use App\Product;
 use App\ProductFail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 if (! function_exists('slugify')) {
     function slugify($title) {
-        return str_replace(' ' , '-' , $title);
+        $slug =  str_replace(' ' , '-' , $title);
+        $slug =  str_replace('?' , '' , $slug);
+        return $slug;
+    }
+}
+if (! function_exists('cartCouponData')) {
+    function cartCouponData($code , $subtotal) {
+        $coupon = Coupon::where('code' , $code)->first();
+        if($coupon->type == 'fixed'){
+            return ['value' => $coupon->value];
+        } else {
+            return ['percent' => $coupon->value , 'value' => $coupon->value * $subtotal / 100];
+        }
     }
 }
 if (! function_exists('extractTitleFromAddress')) {
@@ -28,6 +42,19 @@ if (! function_exists('extractTitleFromAddress')) {
         return $addr;
     }
 }
+if (! function_exists('getItemStock')) {
+    function getItemStock($product , $branch) {
+        $qty = DB::select("SELECT 
+                s.qty 
+                FROM stock s
+                WHERE s.product_id = ?
+                AND s.branch_id = ?
+            " , [$product , $branch]);
+        return isset($qty[0]) ? $qty[0]->qty : 0;
+
+    }
+}
+
 
 if (! function_exists('getFromGoogle')) {
     function getFromGoogle($isbn) {
@@ -52,11 +79,16 @@ if (! function_exists('getFromGoogle')) {
         $description = isset($volumeInfo->description) ?  trim($volumeInfo->description) : ''; 
         if(isset($volumeInfo->authors[0])){
             $author = $volumeInfo->authors[0];
-            $authorRec = Author::where('name' , $author)->first();
-            if($authorRec == null){
+            $authorRec = DB::select('SELECT id FROM authors WHERE `name` = ? OR author_slug = ?' , [$author , slugify($author)]);
+            // dd($authorRec[0]->id);
+            // dd($authorRec);
+
+            if(!isset($authorRec[0]->id)){
                 $authorRec = Author::create(['name' => $author , 'author_slug' => slugify($author)]);
+                $authorId = $authorRec->id;
+            } else {
+                $authorId = $authorRec[0]->id;
             }
-            $authorId = $authorRec->id;
         }
         $authorId = isset($authorId) ? $authorId : null;
         $product = [

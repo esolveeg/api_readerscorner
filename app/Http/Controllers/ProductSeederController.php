@@ -5,89 +5,85 @@ namespace App\Http\Controllers;
 use App\Age;
 use App\Category;
 use App\CategoryProduct;
-use App\data\ProductZeroThree;
+use App\data\Kids;
 use App\data\Adult;
-use App\data\French;
-use App\data\Germany;
-use App\data\Nonfiction;
-use App\data\ProductFiveSeven;
-use App\data\ProductNineEleven;
-use App\data\ProductSevenNine;
-use App\data\ProductThreeFive;
 use App\Language;
 use App\Price;
 use App\Product;
 use App\ProductFail;
 use App\Stock;
-use Illuminate\Http\Request;
 
-use function PHPUnit\Framework\isNull;
 
 class ProductSeederController extends Controller
 {
     public function seedAll(){
-        $zeroThree = new ProductZeroThree;
-        $data = $zeroThree->all();
-        $filters = $zeroThree->filters();
-        $this->insert($data,$filters);
-        $Adult = new Adult;
-        $French = new French;
-        $Germany = new Germany;
-        $Nonfiction = new Nonfiction;
-        $ProductFiveSeven = new ProductFiveSeven;
-        $ProductNineEleven = new ProductNineEleven;
-        $ProductSevenNine = new ProductSevenNine;
-        $ProductThreeFive = new ProductThreeFive;
-        $files = [
-            $Adult,
-            $French,
-            $Germany,
-            $Nonfiction,
-            $ProductFiveSeven,
-            $ProductNineEleven,
-            $ProductSevenNine,
-            $ProductThreeFive,
-        ];
-        foreach($files as $file){
-            $data = $file->all();
-            $filters = $file->filters();
-            $this->insert($data,$filters);
-        }
-
+        $kids = new Kids;
+        $this->insert($kids->all() , 'kids');
+        $adults = new Adult;
+        $this->insert($adults->all() , 'adults');
         return response()->json('seeded successfully');
     }
-    private function insert($collection ,$filters = [])
+    private function insert($collection , $category)
     {
+        // dd(Product::where('slug' ,'Little-Spider\'s-Shapes')->first());
         foreach($collection as $product){
             $isbn = isset($product['isbn']) ? $product['isbn'] : null;
+            // dd($isbn);
             if(isset($product['isbn'])){
                 $isbn = $product['isbn'];
+                if(isset($product['age']) && $product['age'] !== ''){
+                    $age = Age::where('slug' , $product['age'])->first()->id;
+                }
+               
                 $currProduct = Product::where('isbn' , $isbn)->first();
                 if($currProduct !== null){
-                    if($currProduct->price == null){
+                    if(Price::where('product_id' , $currProduct->id)->first() == null){
+                        Price::create(['product_id' => $currProduct->id , 'price' => $product['price']]);
+                    }
+                    if(isset($product['age']) && $product['age'] !== null){
+                        if($age !== $currProduct->age_id ){
+                            $currProduct->age_id = $age;
+                            $currProduct->save();
+                        }
                         Price::create(['product_id' => $currProduct->id , 'price' => $product['price']]);
                     }
                    
                 } else {
+                    // dd(Age::where('slug' , $product['age'])->first()->id);
                     $productApi = getFromGoogle($isbn);
                     if($productApi !== null){
-                        $productApi['language_id'] = $filters['language'];
-                        $productApi['age_id'] = $filters['age'];
-                        if(Product::where('slug' , $productApi['slug'])->first() !== null ){
-                            $productApi['slug'] = $productApi['slug'] . '-' .$productApi['isbn'];
+                        if(isset($product['language']) && Language::where('slug' , $product['language'])->first() !== null ){
+                            $productApi['language_id'] = Language::where('slug' , $product['language'])->first()->id;
                         }
-                        $productRec = Product::create($productApi);
-                        Price::create(['product_id' => $productRec->id , 'price' => $product['price']]);
-                        $stock = ['product_id' => $productRec->id , 'qty' => 3];
-                        Stock::create($stock);
-                        if($filters['categories'] !== null){
-                            foreach($filters['categories'] as $cat){
+                        if(isset($product['age'])){
+                            $productApi['age_id'] = $age;
+                        }
+                        if(Product::where('isbn' , $productApi['isbn'])->first() == null){
+                            // dd('hi');
+                            if(Product::where('slug' , $productApi['slug'])->first() !== null ){
+                                $productApi['slug'] = $productApi['slug'] . '-' .$productApi['isbn'];
+                            }
+                            $productApi['price'] = $product['price'];
+                            // // dd(Product::where('slug' , 'Little-Spider\'s-Shapes')->first());
+                            // $productApi['slug'] = $productApi['slug'] === 'Little-Spider\'s-Shapes' ? 'Little-Spider\'s-Shapes-2'  : $productApi['slug'];
+                            // $productApi['isbn'] = $productApi['isbn'] === '9781789474886' ? '97817894748869'  : $productApi['isbn'];
+                            $productRec = Product::create($productApi);
+                            Price::create(['product_id' => $productRec->id , 'price' => $product['price']]);
+                            $stock = ['product_id' => $productRec->id , 'qty' => 3];
+                            Stock::create($stock);
+                            if($category == 'kids'){
+                                $categories = Category::where('slug' , 'kids')->orWhere('slug' , 'kids-fiction')->pluck('id');
+                            } else if ($category == 'adults'){
+                                $categories = Category::where('slug' , 'adults')->orWhere('slug' , 'adults-fiction')->pluck('id');
+                            }
+                            foreach($categories as $cat){
                                 $rec = [
                                     'category_id' => $cat,
                                     'product_id' => $productRec->id,
                                 ];
                                 CategoryProduct::insert([$rec]);
                             }
+                                
                         }
                     } else{
                         $fail = ProductFail::where('isbn' , $isbn)->first();

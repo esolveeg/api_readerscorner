@@ -18,7 +18,6 @@ class AuthController extends Controller
         $rules = [
             'password' => 'required|max:255',
             'email' => 'required|email|max:255',
-            'ip' => 'required',
         ];
         $user = User::where('email' , $request->email)->first();
         if(!$user){
@@ -34,7 +33,6 @@ class AuthController extends Controller
         }
      
         $tokenRequest = $this->loginAction($user , $request->password);
-        $this->initCart($request->ip , $user);
         return app()->handle($tokenRequest);
 
 
@@ -49,7 +47,6 @@ class AuthController extends Controller
         'email' => 'required|email|max:255',
         'password' => 'required|max:255',
         'name' => 'required|max:255',
-        'ip' => 'required',
         'phone' => 'required|max:255|unique:users'];
         $validator = Validator::make($request->all(), $rules);
         if($validator->fails()){
@@ -66,15 +63,6 @@ class AuthController extends Controller
         
         if(!$user) return   response()->json("registration_faild",500);
         return $user;
-    }
-    private function initCart($ip , $user)
-    {
-        $cart = Cart::where('ip' , $ip)->first();
-        if($cart != null){
-            $cart->user_id = $user->id;
-            $cart->save();
-        }
-        return ;
     }
     public function logout()
     {

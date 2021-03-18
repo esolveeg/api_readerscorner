@@ -14,7 +14,7 @@ class CitySeeder extends Seeder
     {
         $cities = [
                 ['name' => 'cairo', 'shipping_fee' => 45,],
-                ['name' => 'alexandria', 'shipping_fee' => 80,],
+                ['name' => 'alexandria', 'shipping_fee' => 65,],
         ];
         City::insert($cities);
     }

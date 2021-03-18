@@ -21,7 +21,6 @@ class CreateDealsTable extends Migration
             $table->boolean('main')->default(false);
             $table->unsignedBigInteger('product_id');
             $table->foreign('product_id')->references('id')->on('products');
-
             $table->timestamps();
         });
     }

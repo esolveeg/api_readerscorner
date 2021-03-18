@@ -15,7 +15,11 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        $userArr = ['name' => 'ahmed' , 'phone' => '01022052546' , 'email' => 'ahmed@readerscorner.co' , 'password' => bcrypt('123456')];
+        $userArr = ['name' => 'ahmed' , 'phone' => '01022052541' , 'email' => 'ahmed@readerscorner.co' , 'password' => bcrypt('123456')];
+        $adminArr = ['name' => 'admin' , 'phone' => '012022052542' , 'email' => 'admin@readerscorner.co' , 'password' => bcrypt('123456') , 'role_id' => 1 , 'admin' => true];
+        $websiteArr = ['name' => 'website' , 'phone' => '0120220525421' , 'email' => 'website@readerscorner.co' , 'password' => bcrypt('123456') , 'role_id' => 2 ,'branch_id' => 1, 'admin' => true];
+        $posArr1 = ['name' => 'uptown' , 'phone' => '012022052549' , 'email' => 'uptown@readerscorner.co' , 'password' => bcrypt('123456') , 'role_id' => 3 , 'branch_id' => 3  , 'admin' => true];
+        $posArr2 = ['name' => 'point 90' , 'phone' => '012022052541' , 'email' => 'point@readerscorner.co' , 'password' => bcrypt('123456') , 'role_id' => 3 , 'branch_id' => 4  , 'admin' => true];
         $client = [
             'name' => 'Laravel Password Grant Client',
             'secret' => 'g4gbQhrlY99Ynx9Fuh2XcxSq4bR2AaG56qLIfqAY',
@@ -28,6 +32,10 @@ class UserSeeder extends Seeder
 
         Client::create($client);
         $user = User::where('email' , $userArr['email'])->first();
+        User::create($adminArr);
+        User::create($posArr1);
+        User::create($posArr2);
+        User::create($websiteArr);
         if(!$user){
             $user = User::create($userArr);
         }

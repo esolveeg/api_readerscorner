@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Address;
+use App\Cart;
 use App\City;
 use App\Http\Requests\AddressRequest;
 use App\Http\Requests\UserRequest;
@@ -22,28 +23,8 @@ class UserController extends Controller
 
     public function getOrders(Request $request)
     {
-        $orders = Order::where('user_id' , $request->user()->id)->get();
-        foreach($orders as $order){
-            $products = DB::select(
-                "SELECT 
-                    p.title ,
-                    p.image ,
-                    p.id ,
-                    p.thumbnail ,
-                    p.slug ,
-                    op.price ,
-                    op.qty ,
-                    op.old_price , 
-                    a.name author ,
-                    a.author_slug author_slug
-                    FROM order_product op 
-                    JOIN products p 
-                        ON op.product_id = p.id
-                    JOIN authors a 
-                        ON a.id = p.author_id 
-                    WHERE op.order_id = ? " , [$order->id]);
-            $order->products = $products;
-        }
+        $userId = $request->user()->id;
+        $orders = Cart::get($userId , 'orders');
         return response()->json($orders);
     }
 

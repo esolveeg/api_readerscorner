@@ -1,6 +1,6 @@
 <?php
 
-namespace App\QueryFilters;
+namespace App\QueryFilters\product;
 
 use App\Age;
 use App\Language;
@@ -17,6 +17,7 @@ class LanguageFilter
         }
         $language = Language::where('slug' , request("language"))->first();
         $id = $language == null ? Language::where('slug' , 'en')->first()->id : $language->id;
+        // dd($id);
         // dd($id);
         return $builder->where('language_id' , $id);
     }

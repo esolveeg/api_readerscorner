@@ -18,10 +18,20 @@ class CreateCartTable extends Migration
              // products relationship
             $table->unsignedBigInteger('user_id')->nullable();
             $table->foreign('user_id')->references('id')->on('users');
-            $table->string('ip');
+            $table->unsignedBigInteger('address_id')->nullable();
+            $table->foreign('address_id')->references('id')->on('addresses');
             $table->unsignedFloat('shipping')->nullable();
             $table->string('discount_code')->nullable();
-           
+            $table->dateTime('closed_at')->nullable();
+            $table->unsignedFloat('total')->nullable();
+            $table->unsignedFloat('subtotal')->nullable();
+            $table->bigInteger('accept_order_id')->nullable();
+            $table->enum('status' , ['pending' , 'shipping' , 'shipped'])->default('shipping');
+            $table->enum('gateway' , ['card' , 'cod']);
+            $table->unsignedFloat('discount_value')->nullable();
+            $table->unsignedInteger('discount_percent')->nullable();
+            $table->string('error')->nullable();
+
             // categories relationship
             
             $table->timestamps();

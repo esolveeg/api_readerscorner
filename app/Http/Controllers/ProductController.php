@@ -7,27 +7,35 @@ use App\Category;
 use App\Http\Requests\ListProductRequest;
 use App\Language;
 use App\Product;
-use App\QueryFilters\AgeFilter;
-use App\QueryFilters\AuthorFilter;
-use App\QueryFilters\CategoryFilter;
-use App\QueryFilters\KeyFilter;
-use App\QueryFilters\LanguageFilter;
-use App\QueryFilters\SearchFilter;
-use App\QueryFilters\SubCategoryFilter;
+use App\QueryFilters\product\AgeFilter;
+use App\QueryFilters\product\AuthorFilter;
+use App\QueryFilters\product\CategoryFilter;
+use App\QueryFilters\product\KeyFilter;
+use App\QueryFilters\product\LanguageFilter;
+use App\QueryFilters\product\SearchFilter;
+use App\QueryFilters\product\SubCategoryFilter;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
     public function find($slug)
     {
-        return Product::where('slug' , $slug)->with('price')->first();
+        $product = Product::where('slug' , $slug)->first();
+        $author = DB::select("SELECT a.name , a.author_slug FROM products p  JOIN authors a ON p.author_id = a.id WHERE p.id = ? ORDER BY a.order_by ", [$product->id ]);
+        $categories = DB::select("SELECT c.title , c.slug FROM category_product cp  JOIN categories c ON cp.category_id = c.id WHERE cp.product_id = ? ORDER BY c.id ", [$product->id ]);
+        $product->author = isset($author[0]) ? $author[0] : null;
+        $product->categories = $categories;
+        // dd($categories);
+        return $product;
+
     }
     public function list(ListProductRequest $request)
     {
         // dd((int)$request->byWeight);
 
-        $pipeline = app(Pipeline::class)->send(Product::query()->with('price')->join('authors', 'author_id', '=', 'authors.id')
+        $pipeline = app(Pipeline::class)->send(Product::query()->leftJoin('authors', 'author_id', '=', 'authors.id')
         ->orderBy('authors.name', 'ASC'))->through([
             AuthorFilter::class,
             SearchFilter::class,
@@ -40,6 +48,7 @@ class ProductController extends Controller
             LanguageFilter::class,
             SubCategoryFilter::class,
         ])->thenReturn();
+        // dd($pipeline->get());
         return $pipeline->paginate(12); 
     }
 

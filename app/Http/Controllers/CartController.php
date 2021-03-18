@@ -8,7 +8,6 @@ use App\CartProduct;
 use App\City;
 use App\Coupon;
 use App\CouponUser;
-use App\Http\Requests\CartRequest;
 use App\Product;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,54 +18,9 @@ class CartController extends Controller
     
     public function get(Request $request)
     {
-        $user = $request->user('api');
-        $id = isset($user->id) ? $user->id : '';
-        $cart = Cart::where('user_id' , $id)->orWhere('ip' , $request->ip)->first();
-        if($cart == null){
-            return response()->json(['products' => []]);
-        }
-        $products = DB::select(
-                    "SELECT 
-                        p.title ,
-                        p.image ,
-                        p.id ,
-                        p.isbn ,
-                        p.thumbnail ,
-                        p.slug ,
-                        cp.price ,
-                        cp.qty ,
-                        cp.old_price , 
-                        a.name author ,
-                        a.author_slug
-                        FROM cart_product cp 
-                        JOIN products p 
-                            ON cp.product_id = p.id
-                        JOIN authors a 
-                            ON a.id = p.author_id 
-                        WHERE cp.cart_id = ? " , [$cart->id]);
-        
-        if(count($products) > 0){
-            $cart->products = $products;
-            $subtotal = DB::select("SELECT SUM(price * qty) subtotal FROM cart_product WHERE cart_id = ? " ,[ $cart->id])[0]->subtotal;
-            $discountVal = 0;
-            if($cart->discount_code != null){
-                $coupon = Coupon::where('code' , $cart->discount_code)->first();
-                // dd($coupon->type);
-                if($coupon->type == 'fixed'){
-                    $discountVal = $coupon->value;
-                } else {
-                    $cart->percentOff = $coupon->value;
-                    $discountVal =  $coupon->value * $subtotal / 100;
-                }
-                $cart->discounVal = $discountVal;
-            }
-
-            $cart->subtotal = $subtotal;
-            $cart->total = $subtotal - $discountVal;
-            return response()->json($cart);
-        } else{
-            return response()->json('no items');
-        }   
+        $userId = $request->user()->id;
+        $cart = Cart::get($userId , 'cart');
+        return response()->json($cart);
     }
     public function applyShipping(Request $request)
     {
@@ -75,22 +29,22 @@ class CartController extends Controller
         }else {
             $shipping = City::find($request->city_id)->shipping_fee;    
         }
-        $user = $request->user('api');
+        $user = $request->user();
         $id = isset($user->id) ? $user->id : '';
-        $cart = Cart::where('user_id' , $id)->orWhere('ip' , $request->ip)->first();
+        $cart = Cart::where('user_id' , $id)->cart()->first();
         $cart->shipping = $shipping;
+        $cart->address_id = $request->address_id;
         $cart->save();
         return response()->json('Shipping added successfully');
-
     }
     public function applyCoupon(Request $request){
-        $id = isset($request->user('api')->id) ? isset($request->user('api')->id) : null;
+        $id = $request->user()->id;
         
         $coupon = Coupon::where('code' , $request->code)->first();
         if($coupon == null){
             return response()->json('this coupon dosen\'t exists' , 400);
         }
-        $used = CouponUser::where('coupon_id' , $coupon->id)->where('user_id' , $id)->first() !== null;
+        $used = Cart::where('closed_at' , '!=' , null)->where('user_id' , $id)->where('discount_code' , $request->code)->first() !== null;
         if($used){
             return response()->json('you used this coupon previousily' , 400);
         }
@@ -100,30 +54,21 @@ class CartController extends Controller
         if($expired == true){
             return response()->json('this coupon is expired' , 400);
         }
-        $cart = Cart::where('user_id' , $id)->orWhere('ip' , $request->ip)->first();
+        $cart = Cart::where('user_id' , $id)->cart()->first();
         $cart->discount_code = $coupon->code;
         $cart->save();
-            return response()->json('applied successfully');
+        return response()->json('applied successfully');
         
     }
     public function create(Request $request)
     {
-        $user = $request->user('api');
-        $id = isset($user->id) ? $user->id : '';
-        $cart = Cart::where('user_id' , $id)->orWhere('ip' , $request->ip)->first();
+        $userId = $request->user()->id;
+        $cart = Cart::where('user_id' , $userId)->cart()->first();
         if($cart == null){
-            $cart = $this->init($request->ip , $id);
+            $cart =  Cart::create(['user_id' => $userId]);
         }
         $this->setProducts($cart->id , $request->product , $request->qty);
         return response()->json(['success' => 'true' , 'message' => 'added to cart successfully']);
-    }
-    private function init($ip  , $user = null){
-        $rec = ['ip' => $ip]; 
-        if($user != null){
-            $rec['user_id'] = $user;
-        }
-        $cart = Cart::create($rec);
-        return $cart;
     }
     private function setProducts($cart  , $product , $qty = 1 ){
         // dd($product);
@@ -137,8 +82,8 @@ class CartController extends Controller
         $rec = [
             "cart_id" => $cart,
             "product_id" => $pr->id,
-            "price" => $pr->price->price,
-            "old_price" => $pr->price->old_price,
+            "price" => $pr->price,
+            "old_price" => $pr->old_price,
             "qty" => $qty,
         ];
         CartProduct::create($rec);
@@ -146,9 +91,9 @@ class CartController extends Controller
     }
     public function delete(Request $request)
     {
-        $user = $request->user('api');
+        $user = $request->user();
         $id = isset($user->id) ? $user->id : '';
-        $cart = Cart::where('user_id' , $id)->orWhere('ip' , $request->ip)->first();
+        $cart = Cart::where('user_id' , $id)->cart()->first();
         // dd($request->all());
         $pr = Product::where('isbn' , $request->product)->first();
         if($cart == null){
@@ -165,9 +110,9 @@ class CartController extends Controller
     }
     public function update(Request $request , $isbn)
     {
-        $user = $request->user('api');
+        $user = $request->user();
         $userId = isset($user->id) ? $user->id : '';
-        $cart = Cart::where('user_id' , $userId)->orWhere('ip' , $request->ip)->first();
+        $cart = Cart::where('user_id' , $userId)->cart()->first();
         $pr = Product::where('isbn' , $isbn)->first();
         // dd($cart);
         // $cartProduct = CartProduct::where('cart_id' , $cart->id)->where('product_id' , $id)->get(); 

@@ -1,19 +1,20 @@
 <?php
 
-namespace App\QueryFilters;
+namespace App\QueryFilters\product;
 
 use Closure;
 
-class SubCategoryFilter
+class CategoryFilter
 {
+    //
     public function handle($request , Closure $next)
     {
 
         $builder = $next($request);
-        if(!request()->has('subcategory')){
+        if(!request()->has('category')){
             return $builder;
         }
-        $cat = request("subcategory");
+        $cat = request("category");
         
         return $builder->with('categories')->whereHas('categories', function ($query)  use ($cat){
             $query->where('slug', $cat);

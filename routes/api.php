@@ -6,12 +6,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('cors:api')->group(function (){
 	Route::post('/seed','ProductSeederController@seedAll');
-
+	Route::post('/seed-prices','GlobalController@seedPrices');
+	Route::post('/delete-cart','GlobalController@deleteCart');
+	Route::post('/seed-categories','GlobalController@seedCategories');
+	Route::get('/home-products','GlobalController@homeProducts');
+	
 	Route::prefix('city')->group(function() {
 		Route::get('/','CityController@get');
 	});
 
-	Route::prefix('cart')->group(function () {
+	Route::prefix('cart')->middleware('auth:api')->group(function () {
 		Route::post('/get','CartController@get');
 		// Route::post('/','CartController@create');
 		Route::post('/','CartController@create');
@@ -43,6 +47,7 @@ Route::middleware('cors:api')->group(function (){
 	});
 	Route::middleware('auth:api')->group(function () {
 		Route::post('/checkout','CheckoutController@checkout');
+		Route::post('/checkout/gateway','CheckoutController@applyGatewaty');
 		Route::delete('/delete/{table}/{id}','GlobalController@delete');
 
 		Route::prefix('user')->group(function () {
@@ -59,9 +64,38 @@ Route::middleware('cors:api')->group(function (){
 			Route::post('/logout','UserController@logout');
 		});
 	});
+	Route::get('/login','admin/AuthController@get');
 
-	Route::middleware('auth:api')->prefix('admin')->group(function () {
-		Route::get('/orders','OrderController@get');
+	Route::prefix('admin')->namespace('admin')->group(function () {
+		Route::post('/login','AuthController@login');
+		Route::middleware('auth:api')->group(function () {
+			Route::prefix('orders')->group(function () {
+				Route::get('/','OrderController@get');
+				Route::put('/update-status/{id}','OrderController@updateStatus');
+			});
+			Route::prefix('user')->group(function () {
+				Route::get('/','UserController@me');
+				Route::any('/logout','UserController@logout');
+
+			});
+			Route::prefix('inventories')->group(function () {
+				Route::get('/','InventoryController@get');
+				Route::get('/{id}','InventoryController@find');
+				Route::get('/items/get','InventoryController@findItems');
+				Route::post('/','InventoryController@create');
+				Route::put('/qty/{id}','InventoryController@updateQty');
+				Route::put('/close/{id}','InventoryController@close');
+				Route::post('/add','InventoryController@insertItem');
+			});
+			Route::get('/languages','GlobalController@getLanguages');
+			Route::get('/categories','GlobalController@getCategories');
+			Route::get('/ages','GlobalController@getAges');
+			Route::get('/branches','GlobalController@getBranhces');
+			Route::get('/product/{isbn}','GlobalController@findItem');
+			Route::get('/products','ProductController@get');
+			Route::delete('/delete/{table}/{id}','GlobalController@delete');
+		});
+
 	});	
 
 });

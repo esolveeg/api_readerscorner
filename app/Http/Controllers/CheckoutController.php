@@ -18,70 +18,54 @@ class CheckoutController extends Controller
 {
     public function checkout(Request $request)
     {
-        $id = $request->user('api')->id;
-        $cart = Cart::where('user_id' , $id)->first();
-         // return $cart;
+        $id = $request->user()->id;
+        $cart = Cart::where('user_id' , $id)->cart()->first();
+
         if ($cart == null) {
-            return response()->json(['success' => false ,'message' => 'Sorry! No items on your cart.']);
+            return response()->json('Sorry! No items on your cart.' , 400);
         }
         // return $this->productsAreNoLongerAvailable($cart);
         // if ($this->productsAreNoLongerAvailable($cart)) {
         //     return response()->json(['success' => false , 'message' =>'Sorry! One of the items in your cart is no longer avialble.']);
         // }
-        $subtotal = DB::select("SELECT SUM(price * qty) subtotal FROM cart_product WHERE cart_id = ? " ,[ $cart->id])[0]->subtotal;
-        $shipping = Address::find($request->address_id)->city->shipping_fee;
-        $discountCode = $cart->discount_code !== null ? $cart->discount_code : null;
-        $discountVal = 0;
-        $discountPercent = 0;
-        if($discountCode != null){
-            $coupon = \App\Coupon::where('code' , $cart->discount_code)->first();
-            if($coupon->type == 'percent'){
-                $discountPercent = $coupon->value;
-                $discountVal = $coupon->value * $subtotal / 100;
-            }else{
-                $discountVal = $coupon->value;
-            }
-        }
-        $total = $subtotal + $shipping - $discountVal;
-        $order = [
-            "user_id" => $id,
-            "address_id" => $request->address_id,
-            "discount_code" => $discountCode,
-            "shipping" => $shipping,
-            "discount_value" => $discountVal,
-            "discount_percent" => $discountPercent,
-            "total" => $total,
-            "subtotal" => $subtotal,
-            "gateway" => $request->gateway,
-        ];
-        $order = Order::create($order);
-        if($discountCode !== null){
-            CouponUser::create(['user_id' => $id , 'coupon_id' => $coupon->id]);
-        }
-        $products = CartProduct::where('cart_id' , $cart->id)->get();
-        foreach($products as $item){
-           $rec = [
-            'order_id' => $order->id,
-            'product_id' => $item->product_id,
-            'price' => $item->price,
-            'old_price' => $item->old_price,
-            'qty' => $item->qty,
-           ];
-            OrderProduct::create($rec);
-        }
+        $this->prepareCart($cart);
+        $cart->closed_at = now();
+        $cart->save();
         if($request->gateway == 'card'){
-            $url = $this->accept($order);
+            $url = $this->accept($cart);
             return response()->json(['success' => true , "url" => $url]);
         }
-        
-        
         // Mail::send(new OrderPlaced($order , $cart));
-        $this->decreaseQuantities($order->id);
-        $this->destroyCart($cart->id);
-
+        // $this->decreaseQuantities($cart->id);
         // Mail::send(new OrderPlacedAdmin($order));
         return response()->json(['success' => true , 'message' => 'order placed successfully']);
+    }
 
+    private function prepareCart($cart){
+        $subtotal = Cart::subtotal($cart->id);
+        $cart->discount_value = 0;
+        if($cart->discount_code !== null){
+            $coupon = cartCouponData($cart->discount_code , $subtotal);
+            isset($coupon['percent']) ? $cart->discount_percent = $coupon['percent'] : '';
+            $cart->discount_value = $coupon['value'];
+        }
+        $cart->status = 'pending';
+        $cart->subtotal = $subtotal;
+        $cart->total = ($subtotal + $cart->shipping - $cart->discount_value);
+    }
+    public function applyGatewaty(Request $request)
+    {
+        $userId = $request->user()->id;
+        $cart = Cart::where('user_id' , $userId)->cart()->first();
+        if($request->gateway == 'card'){
+            $this->prepareCart($cart);
+            $url = $this->accept($cart);
+            return response()->json(['success' => true , "url" => $url]);
+        }
+        $cart->gateway = $request->gateway;
+        $this->prepareCart($cart);
+        $cart->save();
+        return response()->json('gateway applied successfully successfully');
     }
 
     protected function accept($order){
@@ -125,13 +109,13 @@ class CheckoutController extends Controller
         $merchant = $auth['merchant'];
         $url = 'https://accept.paymobsolutions.com/api/ecommerce/orders';
         
-        $merchant_order_id = '#'.$order->id.rand(1,100);
+        $merchant_order_id = '#'.$order->id.rand(1,1000000);
         $body ='{
             "auth_token": "'.$auth_token.'",
             "delivery_needed": "false",
             "merchant_id": "'.$merchant.'",
             "merchant_order_id": "'.$merchant_order_id.'",
-            "amount_cents": "'.$order->total.'",
+            "amount_cents": "'.($order->total*100).'",
             "currency": "EGP",
             "items": []
             
@@ -155,13 +139,13 @@ class CheckoutController extends Controller
         $auth_token = $orderRegisteration['auth_token'];
         $payment_integration = env('ACCEPT_PAYMENT_INTEGRATION');
         //payment key request
-        $billing_data = DB::select('SELECT a.apartment , u.email , u.name first_name , u.name last_name , a.building , u.phone phone_number , "FriendsEXP" shipping_method ,  c.name city , "EGP" country , a.street , a.floor FROM orders o INNER JOIN addresses a ON a.id = o.address_id INNER JOIN users u ON u.id = a.user_id INNER JOIN cities c ON c.id = a.city_id WHERE o.id = ?' , [$order->id]);
+        $billing_data = DB::select('SELECT  a.apartment , u.email , u.name first_name , u.name last_name , a.building , u.phone phone_number , "FriendsEXP" shipping_method ,  c.name city , "EGYPTG" country , a.street , a.floor FROM cart ca LEFT JOIN addresses a ON a.id = ca.address_id LEFT JOIN users u ON u.id = a.user_id LEFT JOIN cities c ON c.id = a.city_id WHERE ca.id = ?' , [$order->id]);
         $billing_data[0]->floor = $billing_data[0]->floor === null ? 'not provided' : $billing_data[0]->floor;
         $billing_data[0]->apartment = $billing_data[0]->apartment === null ? 'not provided' : $billing_data[0]->apartment;
         $billing = json_encode($billing_data[0]);
         $body = '{
             "auth_token": "'.$auth_token.'",
-            "amount_cents": "'.$order->total.'", 
+            "amount_cents": "'.($order->total*100).'", 
             "expiration": 36000, 
             "order_id": "'.$accept_id.'",    
             "billing_data": '.$billing.', 
@@ -236,7 +220,7 @@ class CheckoutController extends Controller
     	$errorcode = $obj['data']['txn_response_code'];
     	$success = $obj['success'];
     	$order_id = (int)str_replace('#' , '' ,$obj['order']['merchant_order_id']);
-    	$order = Order::find($order_id);
+    	$order = Cart::find($order_id);
     	$errors = [
     	        'There was an error processing the transaction',
     	        'Contact card issuing bank',

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\QueryFilters;
+namespace App\QueryFilters\product;
 
 use App\Age;
 use Closure;
@@ -15,6 +15,7 @@ class AgeFilter
             return $builder;
         }
         $age = Age::where('slug' , request("age"))->first();
+        // dd($age);
         if($age == null){
             return $builder;
         }
