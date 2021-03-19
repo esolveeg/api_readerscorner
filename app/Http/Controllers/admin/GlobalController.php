@@ -8,13 +8,19 @@ use App\Category;
 use App\Http\Controllers\Controller;
 use App\Language;
 use App\Product;
+
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class GlobalController extends Controller
 {
-    public function getBranhces()
+    public function getBranhces(Request $request)
     {
+        if($request->user()->branch_id !== null){
+            $branches = Branch::where('id' , $request->user()->branch_id)->get();
+        }
         $branches = Branch::cacheFor(60 * 60 * 24)->select(['id'  , 'name'])->get();
+        
         return response()->json($branches);
     }
 
