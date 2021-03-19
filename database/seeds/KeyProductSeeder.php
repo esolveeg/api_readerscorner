@@ -14,7 +14,7 @@ class KeyProductSeeder extends Seeder
      */
     public function run()
     {
-        $products = Product::limit(12)->orderBy('id')->pluck('id');
+        $products = Product::limit(12)->where('thumbnail' , '!=' ,null)->orderBy('id')->pluck('id');
         foreach($products as $product){
             // dd($product);
             keyProduct::create([
@@ -24,7 +24,7 @@ class KeyProductSeeder extends Seeder
         }
 
 
-        $products = Product::limit(4)->orderBy('title')->pluck('id');
+        $products = Product::limit(4)->where('thumbnail' , '!=' ,null)->orderBy('title')->pluck('id');
         foreach($products as $product){
             keyProduct::create([
                 'product_id' => $product,

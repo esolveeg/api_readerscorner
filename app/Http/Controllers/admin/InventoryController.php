@@ -6,41 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Inventory;
 use App\InventoryProduct;
 use App\Product;
+use App\QueryFilters\globals\BranchFilter;
+use App\QueryFilters\globals\ClosedFilter;
 use App\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pipeline\Pipeline;
 
 class InventoryController extends Controller
 {
     public function get(Request $request)
     {
-        $offset =   $request->show * ($request->page - 1);
         if($request->user()->branch_id == null){
-            $documents = DB::select("SELECT 
-                                       d.id, d.user_id , d.created_at , d.updated_at, d.branch_id , u.name created_by , b.name branch_name    , d.created_at
-                                    FROM inventories d 
-                                    JOIN users u ON d.user_id = u.id 
-                                    JOIN branches b ON d.branch_id = b.id 
-                                    WHERE d.closed_at  IS NULL
-                                    ORDER BY d.created_at DESC
-                                    LIMIT ?
-                                    OFFSET ?
-                                    " , [$request->show , $offset]);
-        } else {
-            $documents = DB::select("SELECT 
-                                        d.id , d.user_id , d.created_at , d.updated_at, d.branch_id , u.name created_by , b.name branch_name    , d.created_at
-                                    FROM inventories d 
-                                    JOIN users u ON d.user_id = u.id 
-                                    JOIN branches b ON d.branch_id = b.id 
-                                    WHERE d.closed_at  IS NULL
-                                    AND d.branch_id = ?
-                                    ORDER BY d.created_at DESC
-                                    LIMIT ?
-                                    OFFSET ?
-                                    " , [ $request->user()->branch_id ,$request->show , $offset]);
+            $request->branch_id = $request->user()->branch_id;
         }
-        // dd($request->page);
-        return response()->json($documents);
+        $pipeline = app(Pipeline::class)->send(Inventory::query()->select(['inventories.id' , 'users.name AS created_by' , 'inventories.closed_at' , 'branches.name AS branch_name' , 'inventories.user_id' , 'inventories.created_at' , 'inventories.updated_at' , 'inventories.branch_id'])->join('users', 'user_id', '=', 'users.id')->join('branches', 'inventories.branch_id', '=', 'branches.id')
+        ->orderBy('created_at', 'DESC'))->through([
+            ClosedFilter::class,
+            BranchFilter::class,
+        ])->thenReturn();
+        return response()->json($pipeline->get());
     }
 
     public function updateQty($id , Request $request)
@@ -69,7 +54,6 @@ class InventoryController extends Controller
             ];
             Stock::create($rec);
         }
-
         $document->closed_at = now();
         $document->save();
         return response()->json("stock updated successfully");
@@ -77,7 +61,6 @@ class InventoryController extends Controller
     public function findItems(Request $request)
     {
         $offset =   $request->show * ($request->page - 1);
-        // $document = Inventory::find($id);
         $items = DB::select("SELECT 
                             SQL_CALC_FOUND_ROWS ip.id , p.title , p.isbn , ip.qty , ip.real_qty , (ip.qty - ip.real_qty) `difference` 
                             FROM inventory_product ip 

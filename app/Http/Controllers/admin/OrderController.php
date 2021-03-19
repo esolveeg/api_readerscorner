@@ -5,7 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Cart;
 use App\Http\Controllers\Controller;
 use App\Order;
-use App\QueryFilters\order\ClosedFilter;
+use App\QueryFilters\globals\ClosedFilter;
 use App\QueryFilters\order\GatewayFilter;
 use App\QueryFilters\order\StatusFilter;
 use Illuminate\Http\Request;
