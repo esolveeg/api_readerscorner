@@ -17,7 +17,7 @@ class InventoryController extends Controller
 {
     public function get(Request $request)
     {
-        if($request->user()->branch_id == null){
+        if($request->user()->branch_id !== null){
             $request->branch = $request->user()->branch;
         }
         $pipeline = app(Pipeline::class)->send(Inventory::query()->select(['inventories.id' , 'users.name AS created_by' , 'inventories.closed_at' , 'branches.name AS branch_name' , 'inventories.user_id' , 'inventories.created_at' , 'inventories.updated_at' , 'inventories.branch_id'])->join('users', 'user_id', '=', 'users.id')->join('branches', 'inventories.branch_id', '=', 'branches.id')
