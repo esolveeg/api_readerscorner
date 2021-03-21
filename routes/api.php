@@ -73,6 +73,18 @@ Route::middleware('cors:api')->group(function (){
 				Route::get('/','OrderController@get');
 				Route::put('/update-status/{id}','OrderController@updateStatus');
 			});
+			Route::prefix('documents')->group(function () {
+				Route::get('/','DocumentController@get');
+				Route::post('/','DocumentController@create');
+				Route::pul('/{id}/close','DocumentController@close');
+				Route::get('/items','DocumentController@findItems');
+				Route::put('/{id}/account','DocumentController@attachAccount');
+				Route::put('/{id}/account/detach','DocumentController@detachAccount');
+				Route::put('/{id}/discount','DocumentController@attachDiscount');
+				Route::put('/{id}/discount/detach','DocumentController@detachDiscount');
+				Route::post('/{id}/insert','DocumentController@insertDocItem');
+				Route::post('/{id}/qty','DocumentController@updateQty');
+			});
 			Route::prefix('user')->group(function () {
 				Route::get('/','UserController@me');
 				Route::any('/logout','UserController@logout');

@@ -39,9 +39,6 @@ class ProductController extends Controller
 
     public function create(AdminProductRequest $request)
     {
-        // dd("asd");
-    //    $request->except('categories');
-    //    dd($request->except('categories'));
         $product=  Product::create($request->except('categories'));
         if($request->categories){
             foreach($request->categories as $category){
