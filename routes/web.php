@@ -18,6 +18,11 @@ Route::get('/clonedb', function () {
   return response()->json('success');
 });
 Route::get('/test' , function() {
+  $user = \App\User::where('email' , 'point@readerscorner.co')->first();
+  $user->admin = 1;
+  $user->branch_id = 4;
+  $user->role_id = 3;
+  $user->save();
 });
 Route::get('/fix-prices', function () {
   $kids =new  Kids;

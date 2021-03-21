@@ -8,9 +8,10 @@ use App\Category;
 use App\Http\Controllers\Controller;
 use App\Language;
 use App\Product;
-
+use App\Stock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class GlobalController extends Controller
 {
@@ -22,6 +23,74 @@ class GlobalController extends Controller
         $branches = Branch::cacheFor(60 * 60 * 24)->select(['id'  , 'name'])->get();
         
         return response()->json($branches);
+    }
+    public function deleteProucts(){
+        $file = file_get_contents(public_path('system_products_other1.json'));
+      $products = json_decode($file);
+      $chunks = array_chunk($products , 100);
+      foreach($chunks as $chunk){
+        // dd($chunk);
+        foreach($chunk as $rec){
+          $product = [
+            "title" => $rec->title,
+            "slug" => slugify($rec->title),
+            "isbn" => $rec->isbn,
+            "website" => false,
+            "price" => $rec->price,
+          ];
+          $productRec = DB::select('SELECT id , title FROM products WHERE isbn = ? OR slug = ? LIMIT 1' ,[$product['isbn'] , $product['slug']]);
+          if(!isset($productRec[0])){
+            $productRec = Product::create($product);
+            $id = $productRec->id;
+          } else {
+            $id = $productRec[0]->id;
+            DB::delete("DELETE FROM products WHERE id = ?" , [$id]);
+            DB::delete("DELETE FROM stock WHERE product_id = ?" , [$id]);
+
+            Log::info('100 products deleted' . now());
+          }
+          
+        }}
+        return "success";
+    }
+    public function insertProucts(){
+        $file = file_get_contents(public_path('system_products_whole.json'));
+      $products = json_decode($file);
+      $chunks = array_chunk($products , 100);
+      foreach($chunks as $chunk){
+        // dd($chunk);
+        foreach($chunk as $rec){
+          $product = [
+            "title" => $rec->title,
+            "slug" => slugify($rec->title),
+            "isbn" => $rec->isbn,
+            "website" => false,
+            "price" => $rec->price,
+          ];
+          $productRec = DB::select('SELECT id , title FROM products WHERE isbn = ? OR slug = ? LIMIT 1' ,[$product['isbn'] , $product['slug']]);
+          if(!isset($productRec[0])){
+            $productRec = Product::create($product);
+            $id = $productRec->id;
+          } else {
+            $id = $productRec[0]->id;
+          }
+          // dd($id);
+          
+          
+          // dd($id);
+          
+          foreach($rec->stock as $item){
+            $qty = $item->qty < 0 || $item->qty > 100 ? 0 : $item->qty;
+            $rec = [
+              'branch_id' => $item->branch_id,
+              'product_id' => $id,
+              'qty' => $qty,
+            ];
+            Stock::create($rec);
+            Log::info('100 products seeded' . now());
+          }
+      }}
+      return  'success';
     }
 
     public function getLanguages()

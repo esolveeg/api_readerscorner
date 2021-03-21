@@ -31,6 +31,7 @@ class ProductController extends Controller
         return $product;
 
     }
+    
     public function list(ListProductRequest $request)
     {
         // dd((int)$request->byWeight);

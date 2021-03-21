@@ -78,6 +78,11 @@ Route::middleware('cors:api')->group(function (){
 				Route::any('/logout','UserController@logout');
 
 			});
+			Route::prefix('products')->group(function () {
+				Route::post('/','ProductController@create');
+				Route::get('/','ProductController@get');
+				Route::get('/find/{slug}','ProductController@find');
+			});
 			Route::prefix('inventories')->group(function () {
 				Route::get('/','InventoryController@get');
 				Route::get('/{id}','InventoryController@find');
@@ -88,11 +93,13 @@ Route::middleware('cors:api')->group(function (){
 				Route::post('/add','InventoryController@insertItem');
 			});
 			Route::get('/languages','GlobalController@getLanguages');
+			Route::post('/insert/products','GlobalController@insertProucts');
+			Route::delete('/delete/products','GlobalController@deleteProucts');
+			
 			Route::get('/categories','GlobalController@getCategories');
 			Route::get('/ages','GlobalController@getAges');
 			Route::get('/branches','GlobalController@getBranhces');
 			Route::get('/product/{isbn}','GlobalController@findItem');
-			Route::get('/products','ProductController@get');
 			Route::delete('/delete/{table}/{id}','GlobalController@delete');
 		});
 

@@ -13,6 +13,7 @@ class BranchFilter
         if(!request()->has('branch') || request('branch') == 'undefined' || request('branch') == 'null'){
             return $builder;
         }
+        dd(request('branch'));
         return $builder->where('branches.id' , request('branch'));;
     }
 

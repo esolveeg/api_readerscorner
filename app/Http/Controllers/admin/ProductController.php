@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\CategoryProduct;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminProductRequest;
 use App\Product;
 use App\QueryFilters\product\AgeFilter;
 use App\QueryFilters\product\AuthorFilter;
@@ -33,5 +35,46 @@ class ProductController extends Controller
             SubCategoryFilter::class,
         ])->thenReturn();
         return response()->json(['items' => $pipeline->skip($offset)->take($request->show)->get() , 'total' => $pipeline->count()]);
+    }
+
+    public function create(AdminProductRequest $request)
+    {
+        // dd("asd");
+    //    $request->except('categories');
+    //    dd($request->except('categories'));
+        $product=  Product::create($request->except('categories'));
+        if($request->categories){
+            foreach($request->categories as $category){
+                CategoryProduct::create([
+                    "category_id" => $category,
+                    "product_id" => $product->id
+                ]);
+            }
+        }
+        return $product;
+
+
+    }
+
+    public function find($isbn)
+    {
+        $product = Product::where('slug' , $isbn)->select([
+            'id',
+            'title',
+            'slug',
+            'thumbnail',
+            'image',
+            'isbn',
+            'description',
+            'author_id',
+            'language_id',
+            'age_id',
+            'price',
+            'old_price',
+            'website',
+        ])->first();
+        dd($isbn);
+
+
     }
 }
