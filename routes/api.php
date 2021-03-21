@@ -76,7 +76,7 @@ Route::middleware('cors:api')->group(function (){
 			Route::prefix('documents')->group(function () {
 				Route::get('/','DocumentController@get');
 				Route::post('/','DocumentController@create');
-				Route::pul('/{id}/close','DocumentController@close');
+				Route::put('/{id}/close','DocumentController@close');
 				Route::get('/items','DocumentController@findItems');
 				Route::put('/{id}/account','DocumentController@attachAccount');
 				Route::put('/{id}/account/detach','DocumentController@detachAccount');

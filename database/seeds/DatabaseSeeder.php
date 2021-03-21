@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             KeySeeder::class,
             KeyProductSeeder::class,
             SliderSeeder::class,
+            AccountSeeder::class,
         ]);
     }
 }
