@@ -36,7 +36,7 @@ class ProductController extends Controller
     {
         // dd((int)$request->byWeight);
 
-        $pipeline = app(Pipeline::class)->send(Product::query()->leftJoin('authors', 'author_id', '=', 'authors.id')
+        $pipeline = app(Pipeline::class)->send(Product::query()->where('website' , 1)->leftJoin('authors', 'author_id', '=', 'authors.id')
         ->orderBy('authors.name', 'ASC'))->through([
             AuthorFilter::class,
             SearchFilter::class,
