@@ -47,9 +47,9 @@ class InventoryController extends Controller
             $rec = [
                 "product_id" => $item->product_id,
                 "branch_id" => $document->branch_id,
-                "qty" => $item->qty,
+                "in" => $item->qty,
             ];
-            Stock::create($rec);
+            defineItemStock($rec);
         }
         $document->closed_at = now();
         $document->save();

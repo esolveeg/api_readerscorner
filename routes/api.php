@@ -75,6 +75,7 @@ Route::middleware('cors:api')->group(function (){
 			});
 			Route::prefix('documents')->group(function () {
 				Route::get('/','DocumentController@get');
+				Route::get('/{id}/find','DocumentController@find');
 				Route::post('/','DocumentController@create');
 				Route::put('/{id}/close','DocumentController@close');
 				Route::get('/items','DocumentController@findItems');
@@ -82,8 +83,8 @@ Route::middleware('cors:api')->group(function (){
 				Route::put('/{id}/account/detach','DocumentController@detachAccount');
 				Route::put('/{id}/discount','DocumentController@attachDiscount');
 				Route::put('/{id}/discount/detach','DocumentController@detachDiscount');
-				Route::post('/{id}/insert','DocumentController@insertDocItem');
-				Route::post('/{id}/qty','DocumentController@updateQty');
+				Route::post('/insert','DocumentController@insertDocItem');
+				Route::put('/{id}/{qty}/qty','DocumentController@updateQty');
 			});
 			Route::prefix('user')->group(function () {
 				Route::get('/','UserController@me');
@@ -93,6 +94,7 @@ Route::middleware('cors:api')->group(function (){
 			Route::prefix('products')->group(function () {
 				Route::post('/','ProductController@create');
 				Route::get('/','ProductController@get');
+				Route::get('/find/isbn/{isbn}','ProductController@findByIsbn');
 				Route::get('/find/{slug}','ProductController@find');
 			});
 			Route::prefix('inventories')->group(function () {

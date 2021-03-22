@@ -21,7 +21,8 @@ class CreateStockTable extends Migration
             $table->unsignedBigInteger('branch_id');
             $table->foreign('branch_id')->references('id')->on('branches')->default(1)->onDelete('cascade');
 
-            $table->tinyInteger('qty')->default(1);
+            $table->tinyInteger('in');
+            $table->tinyInteger('out');
             $table->timestamps();
         });
     }

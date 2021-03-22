@@ -5,6 +5,8 @@ use App\City;
 use App\Coupon;
 use App\Product;
 use App\ProductFail;
+use App\Stock;
+use App\StockHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -44,18 +46,48 @@ if (! function_exists('extractTitleFromAddress')) {
 }
 if (! function_exists('getItemStock')) {
     function getItemStock($product , $branch) {
-        $qty = DB::select("SELECT 
-                s.qty 
-                FROM stock s
-                WHERE s.product_id = ?
-                AND s.branch_id = ?
-            " , [$product , $branch]);
-        return isset($qty[0]) ? $qty[0]->qty : 0;
+        $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id" , [$product , $branch]);
+        return isset($stock[0]) ? $stock[0]->qty : 0;
 
     }
 }
 
-
+if (! function_exists('getItemStocks')) {
+    function getItemStocks($product) {
+      $stock =  DB::select("SELECT * FROM stockView  WHERE product_id = ?" , [$product]);
+        return $stock;
+    }
+}
+if (! function_exists('addItemStock')) {
+    function addItemStock($rec) {
+        $stock = DB::select("SELECT id , `in` , `out` FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
+        if(isset($stock[0])){
+            if(isset($rec['in'])){
+                DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $rec['in'] + $stock[0]->in , $stock[0]->id]);
+            } else {
+                //dd($stock[0]);
+                DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $rec['out'] + $stock[0]->out , $stock[0]->id]);
+            }
+        } else {
+            if($rec['in']){
+                $rec['out'] = 0;
+            } else {
+                $rec['in'] = 0;
+            }
+            DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , $rec['out']]);
+        }
+    }
+}
+if (! function_exists('defineItemStock')) {
+    function defineItemStock($rec) {
+        $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
+        if(isset($stock[0])){
+            DB::update('UPDATE stock s SET s.in = ? , s.out = ?  WHERE id =? ' , [ $rec['in'] ,0, $stock[0]->id]);
+        } else {
+            DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , 0]);
+        }
+    }
+}
 if (! function_exists('getFromGoogle')) {
     function getFromGoogle($isbn) {
         $product = Product::where('isbn' , $isbn)->first();

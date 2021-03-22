@@ -7,6 +7,7 @@ use App\Price;
 use App\Product;
 use App\ProductFail;
 use App\Stock;
+use App\StockHistory;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -93,11 +94,11 @@ class ProductSeeder extends Seeder
           foreach($rec->stock as $item){
             $qty = $item->qty < 0 || $item->qty > 100 ? 0 : $item->qty;
             $rec = [
-              'branch_id' => $item->branch_id,
-              'product_id' => $id,
-              'qty' => $qty,
+              'branch' => $item->branch_id,
+              'product' => $id,
+              'in' => $qty,
             ];
-            Stock::create($rec);
+            defineItemStock($rec);
           }
       }}
       $file = file_get_contents(public_path('products_fail.json'));
