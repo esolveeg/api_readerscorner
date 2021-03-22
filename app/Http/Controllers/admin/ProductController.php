@@ -16,6 +16,7 @@ use App\QueryFilters\product\SearchFilter;
 use App\QueryFilters\product\SubCategoryFilter;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -52,7 +53,14 @@ class ProductController extends Controller
 
 
     }
+    public function findByIsbn($isbn)
+    {
+        $product = Product::where('isbn' , $isbn)->first();
+        // dd($product);
+        $stock = getItemStocks($product->id);
+        return response()->json($stock);
 
+    }
     public function find($isbn)
     {
         $product = Product::where('slug' , $isbn)->select([

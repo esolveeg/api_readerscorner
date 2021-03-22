@@ -16,11 +16,27 @@ class DocumentController extends Controller
     {
         dd('get');
     }
-
+    public function find($id)
+    {
+       $document = Document::find($id);
+        return response()->json($document);
+    }
+    
     public function create(Request $request)
     {
-        $branch = $request->user()->branch_id ?  $request->user()->branch_id : $request->branch;
-
+        if(!isset($request->type)){
+            return response()->json('type is required' , 400);
+        }
+        // $branch = $request->user()->branch_id ?  $request->user()->branch_id : $request->branch;
+        if($request->user()->branch_id){
+            $branch = $request->user()->branch_id;
+        }else {
+            if(!$request->branch){
+                return response()->json('branch is required' , 400);
+            }
+            $branch = $request->branch;
+        }
+        // dd($branch);
         $document = Document::create([
             "created_by" => $request->user()->id,
             "account_id" => $request->account,
@@ -36,34 +52,36 @@ class DocumentController extends Controller
     {
         $document = Document::find($id);
         $items = DB::select("SELECT dp.qty , dp.real_qty , dp.product_id FROM document_product dp WHERE document_id = ?" , [$id]);
+        
         foreach($items as $item){
+            $rec = [
+                "product" => $item->product_id,
+                "branch" => $document->branch_id,
+            ];
+            // dd($rec);
             //check if document type is sell or buy return 
-            if($document->type > 2){
-                $qty = $item->real_qty  - $item->qty ;
+            if($document->type < 2){
+                $rec['out'] = $item->qty ;
                 //check if document type is buy or sell return 
-            }else if($document->type > 4){
-                $qty = $item->real_qty  + $item->qty ;
-
+            }else if($document->type < 4){
+                $rec['in'] = $item->qty ;
                 //check if document type is inventory or define or first balance
-            } else if($document->type > 6){
-                $qty = $item->qty;
+            } else if($document->type < 6){
+                $rec['in'] = $item->qty ;
+                defineItemStock($rec);
                 //chec if document type is transaction
             } else {
-                $qty =  $item->real_qty + $item->qty;
+                $rec['out'] = $item->qty ;
                 $toRec = [
                     "product_id" => $item->product_id,
                     "branch_id" => $document->branch_to,
-                    "qty" => $item->real_qty_to + $item->qty,
+                    "in" => $item->qty,
                 ];
-                Stock::create($toRec);
+                addItemStock($toRec);
 
             }
-            $rec = [
-                "product_id" => $item->product_id,
-                "branch_id" => $document->branch_id,
-                "qty" => $qty,
-            ];
-            Stock::create($rec);
+            //execlude inventory & define & first balance to add stock
+            $document->type > 3 && $document->type < 6 ? '': addItemStock($rec);
         }
         $document->closed_at = now();
         $document->save();
@@ -132,12 +150,15 @@ class DocumentController extends Controller
         // dd($product);
         $document = Document::find($request->doc);
         $qty = getItemStock($product->id , $document->branch_id);
+        // dd($qty);
         $qtyTo =  $document->branch_to ? getItemStock($product->id , $document->branch_to) : null;
         $item = DocumentProduct::where('product_id' , $product->id)->where('document_id' , $document->id)->first();
         if($item == null){
             $rec = [
                 "product_id" => $product->id,
                 "document_id" => $document->id,
+                "price" => $product->price,
+                "old_price" => $product->old_price,
                 "qty" => $request->qty,
                 "real_qty" => $qty,
                 "real_qty_to" => $qtyTo,
@@ -155,11 +176,12 @@ class DocumentController extends Controller
         return response()->json($item);
     }
 
-    public function updateQty($id , Request $request)
+    public function updateQty($id , $qty)
     {
+        // dd($qty);
         $record = DocumentProduct::find($id);
-        $record->qty = $request->qty;
+        $record->qty = $qty;
         $record->save();
-        return response()->json($record->inventory_id);
+        return response()->json($record->document_id);
     }
 }

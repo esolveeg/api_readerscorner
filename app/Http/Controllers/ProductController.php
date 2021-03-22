@@ -66,6 +66,7 @@ class ProductController extends Controller
         }
         return response()->json($categories->get());
     }
+    
     public function languages($parent =  null)
     {
         $languages = Language::all();
