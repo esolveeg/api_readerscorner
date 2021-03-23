@@ -63,13 +63,16 @@ if (! function_exists('addItemStock')) {
         $stock = DB::select("SELECT id , `in` , `out` FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
         if(isset($stock[0])){
             if(isset($rec['in'])){
-                DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $rec['in'] + $stock[0]->in , $stock[0]->id]);
+                $qty = $rec['in'] + $stock[0]->in;
+                // dd($qty);
+                DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $qty , $stock[0]->id]);
             } else {
-                //dd($stock[0]);
-                DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $rec['out'] + $stock[0]->out , $stock[0]->id]);
+                $qty = $rec['out'] + $stock[0]->out;
+                // dd(DB::select("SELECT * FROM stock s WHERE id = ? " , [$stock[0]->id]));
+                DB::update('UPDATE stock s SET s.out = ?  WHERE id =? ' , [ $qty , $stock[0]->id]);
             }
         } else {
-            if($rec['in']){
+            if(isset($rec['in'])){
                 $rec['out'] = 0;
             } else {
                 $rec['in'] = 0;

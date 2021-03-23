@@ -6,15 +6,23 @@ use App\Document;
 use App\DocumentProduct;
 use App\Http\Controllers\Controller;
 use App\Product;
+use App\QueryFilters\globals\BranchFilter;
+use App\QueryFilters\globals\ClosedFilter;
 use App\Stock;
 use Illuminate\Http\Request;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\DB;
 
 class DocumentController extends Controller
 {
     public function get()
     {
-        dd('get');
+        $pipeline = app(Pipeline::class)->send(Document::query()->select(['documents.id' , 'users.name AS created_by' , 'documents.closed_at' , 'branches.name AS branch_name' , 'documents.created_by' , 'documents.created_at' , 'documents.updated_at' , 'documents.branch_id'])->join('users', 'created_by', '=', 'users.id')->join('branches', 'documents.branch_id', '=', 'branches.id')
+        ->orderBy('created_at', 'DESC'))->through([
+            ClosedFilter::class,
+            BranchFilter::class,
+        ])->thenReturn();
+        return response()->json($pipeline->get());
     }
     public function find($id)
     {
@@ -57,31 +65,59 @@ class DocumentController extends Controller
             $rec = [
                 "product" => $item->product_id,
                 "branch" => $document->branch_id,
+                
             ];
+            // dd($document->type < 6  && $document->type >= 4);
+            switch (true) {
+                case $document->type <2:
+                   $rec['out'] = $item->qty;
+                    break;
+
+                case $document->type < 4 && $document->type >= 2:
+                    $rec['in'] = $item->qty;
+                    break;
+                case $document->type < 6  && $document->type >= 4:
+                    $rec['in'] = $item->qty ;
+                    defineItemStock($rec);
+                    break;
+
+                case $document->type == 7:
+                    $rec['out'] = $item->qty ;
+                    $toRec = [
+                        "product" => $item->product_id,
+                        "branch" => $document->branch_to,
+                        "in" => $item->qty,
+                    ];
+                    addItemStock($toRec);
+                    break;
+                 default:
+                    
+                    break;
+            }
+            
             // dd($rec);
             //check if document type is sell or buy return 
-            if($document->type < 2){
-                $rec['out'] = $item->qty ;
-                //check if document type is buy or sell return 
-            }else if($document->type < 4){
-                $rec['in'] = $item->qty ;
-                //check if document type is inventory or define or first balance
-            } else if($document->type < 6){
-                $rec['in'] = $item->qty ;
-                defineItemStock($rec);
-                //chec if document type is transaction
-            } else {
-                $rec['out'] = $item->qty ;
-                $toRec = [
-                    "product_id" => $item->product_id,
-                    "branch_id" => $document->branch_to,
-                    "in" => $item->qty,
-                ];
-                addItemStock($toRec);
-
-            }
+            // if($document->type < 2){
+            //     $rec['out'] = $item->qty ;
+            //     //check if document type is buy or sell return 
+            // }else if($document->type < 4 && $document->type > 1){
+            //     $rec['in'] = $item->qty;
+            //     //check if document type is inventory or define or first balance
+            // } else if($document->type < 6  && $document->type > 3){
+            //     $rec['in'] = $item->qty ;
+            //     defineItemStock($rec);
+            //     //chec if document type is transaction
+            // } else {
+            //     $rec['out'] = $item->qty ;
+            //     $toRec = [
+            //         "product_id" => $item->product_id,
+            //         "branch_id" => $document->branch_to,
+            //         "in" => $item->qty,
+            //     ];
+            //     addItemStock($toRec);
+            // }
             //execlude inventory & define & first balance to add stock
-            $document->type > 3 && $document->type < 6 ? '': addItemStock($rec);
+            ($document->type < 6  && $document->type >= 4) ? '' : addItemStock($rec); 
         }
         $document->closed_at = now();
         $document->save();
