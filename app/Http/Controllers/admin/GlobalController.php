@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\admin;
 
 use App\Age;
+use App\Author;
 use App\Branch;
 use App\Category;
 use App\Http\Controllers\Controller;
@@ -93,6 +94,21 @@ class GlobalController extends Controller
       return  'success';
     }
 
+    public function getCategoriesTree()
+    {
+      $categories = Category::cacheFor(60 * 60 * 24)->select(['id'  , 'title'])->where('parent_id' , null)->get();
+      foreach($categories as $category){
+        $children = Category::cacheFor(60 * 60 * 24)->select(['id'  , 'title'])->where('parent_id' , $category->id)->get();
+        $category->children = $children;
+      }
+      return response()->json($categories);
+    }
+    public function getAuthors()
+    {
+      $authors = Author::select(['id' , 'name' , 'author_slug'])->get();
+      return response()->json($authors);
+    }
+    
     public function getLanguages()
     {
         $languages = Language::cacheFor(60 * 60 * 24)->select(['id'  , 'title'])->get();

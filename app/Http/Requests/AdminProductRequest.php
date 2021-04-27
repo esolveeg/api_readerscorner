@@ -26,8 +26,8 @@ class AdminProductRequest extends FormRequest
         return [
             "title" => 'required|unique:products|max:255',
             "slug" => 'required|unique:products|max:255',
-            "thumbnail" => 'required|unique:products|max:255',
-            "image" => 'required|unique:products|max:255',
+            "thumbnail" => 'nullable',
+            "image" => 'nullable',
             "isbn" => 'required|unique:products|max:255',
             "description" => 'nullable',
             "categories" => 'nullable|array',

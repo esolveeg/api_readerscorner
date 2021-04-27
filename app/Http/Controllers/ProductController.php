@@ -17,6 +17,7 @@ use App\QueryFilters\product\SubCategoryFilter;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -87,5 +88,40 @@ class ProductController extends Controller
 
         ])->thenReturn();
         return $pipeline->limit(10)->get(); 
+    }
+
+    private function insertProudct($request , $document){
+        // check if product type is define to apply create product function
+
+        //validate product request
+        
+
+    }
+    public function create(Request $request){
+        $rules = [
+            "title" => "required|max:255",
+            "slug" => "required|max:255|unique:products",
+            "thumbnail" => "nullable",
+            "image" => "nullable",
+            "isbn" => "required|max:255|unique:products",
+            "description" => "nullable|max:255",
+            "author_id" => "nullable|max:255",
+            "language_id" => "nullable|max:255",
+            "age_id" => "nullable|max:255",
+            "price" => "required|between:0,9999.99",
+            "old_price" => "nullable",
+            "website" => "nullable",
+        ];
+
+        
+        $validation = Validator::make($request->all(),$rules);
+    
+        if($validation->fails()){
+            return response()->json($validation->errors());
+        } 
+        $product = [];
+        $product = Product::create($product);
+        return response()->json($product);
+
     }
 }

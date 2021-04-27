@@ -16,13 +16,16 @@ use App\QueryFilters\product\SearchFilter;
 use App\QueryFilters\product\SubCategoryFilter;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
-use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
     
     public function get(Request $request)
     {
+        // $validator = Validator::make($request->all(), $rules);
+        if(!isset($request->show) || !isset($request->page)){
+            return response()->json('size and show are required' , 400);
+        }
         $offset =   $request->show * ($request->page - 1);
         $pipeline = app(Pipeline::class)->send(Product::query()->select(['id' , 'isbn' , 'title' , 'price' , 'thumbnail'])
         ->orderBy('created_at', 'DESC'))->through([

@@ -15,6 +15,9 @@ class OrderController extends Controller
 {
     public function get(Request $request)
     {
+        if(!isset($request->show) || !isset($request->page)){
+            return response()->json('size and show are required' , 400);
+        }
         $offset =   $request->show * ($request->page - 1);
         $pipeline = app(Pipeline::class)->send(Cart::query()->select([
             'id' ,

@@ -106,11 +106,20 @@ Route::middleware('cors:api')->group(function (){
 				Route::put('/close/{id}','InventoryController@close');
 				Route::post('/add','InventoryController@insertItem');
 			});
+			Route::prefix('authors')->group(function () {
+				Route::get('/','AuthorController@get');
+				Route::get('/{id}','AuthorController@find');
+				Route::post('/','AuthorController@create');
+				Route::put('/{id}','AuthorController@update');
+				Route::delete('/{id}','AuthorController@delete');
+			});
 			Route::get('/languages','GlobalController@getLanguages');
+			Route::get('/authors','GlobalController@getAuthors');
 			Route::post('/insert/products','GlobalController@insertProucts');
 			Route::delete('/delete/products','GlobalController@deleteProucts');
 			
 			Route::get('/categories','GlobalController@getCategories');
+			Route::get('/categories/tree','GlobalController@getCategoriesTree');
 			Route::get('/ages','GlobalController@getAges');
 			Route::get('/branches','GlobalController@getBranhces');
 			Route::get('/product/{isbn}','GlobalController@findItem');

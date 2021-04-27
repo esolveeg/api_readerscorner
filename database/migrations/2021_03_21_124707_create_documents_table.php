@@ -21,7 +21,7 @@ class CreateDocumentsTable extends Migration
             $table->unsignedBigInteger('account_id')->nullable();
             $table->foreign('account_id')->references('id')->on('accounts')->onDelete('set null');
 
-            $table->unsignedBigInteger('branch_id');
+            $table->unsignedBigInteger('branch_id')->nullable();
             $table->foreign('branch_id')->references('id')->on('branches')->onDelete('cascade');
 
             $table->unsignedBigInteger('branch_to')->nullable();

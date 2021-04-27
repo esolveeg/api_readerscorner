@@ -15,7 +15,7 @@ class ImageFilter
             return $builder;
         }
 
-        $builder  = request('image') == 0 ? $builder->where('thumbnail'  , null) :  $builder->where('thumbnail' , '!=' , null);
+        $builder  = request('image') == 0 ? $builder->where('thumbnail'  , '') :  $builder->where('thumbnail' , '!=' , '');
         return $builder->where('thumbnail' , '!=' , null);
     }
 
