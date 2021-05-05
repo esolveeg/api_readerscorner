@@ -88,6 +88,7 @@ Route::middleware('cors:api')->group(function (){
 			});
 			Route::prefix('user')->group(function () {
 				Route::get('/','UserController@me');
+				Route::get('/list','UserController@get');
 				Route::any('/logout','UserController@logout');
 
 			});
@@ -122,6 +123,7 @@ Route::middleware('cors:api')->group(function (){
 			Route::get('/categories/tree','GlobalController@getCategoriesTree');
 			Route::get('/ages','GlobalController@getAges');
 			Route::get('/branches','GlobalController@getBranhces');
+			Route::get('/roles','GlobalController@getRoles');
 			Route::get('/product/{isbn}','GlobalController@findItem');
 			Route::delete('/delete/{table}/{id}','GlobalController@delete');
 		});

@@ -22,11 +22,11 @@ class ProductController extends Controller
     
     public function get(Request $request)
     {
-        // $validator = Validator::make($request->all(), $rules);
-        if(!isset($request->show) || !isset($request->page)){
-            return response()->json('size and show are required' , 400);
-        }
+        //check if page and show dosn't come with the request to set them to initial vals
+        $request->show = !isset($request->show) ? 10 : intval($request->show);
+        $request->page = !isset($request->page)  ? 1 : intval($request->page);
         $offset =   $request->show * ($request->page - 1);
+        // dd($offset);
         $pipeline = app(Pipeline::class)->send(Product::query()->select(['id' , 'isbn' , 'title' , 'price' , 'thumbnail'])
         ->orderBy('created_at', 'DESC'))->through([
             AuthorFilter::class,
@@ -38,7 +38,10 @@ class ProductController extends Controller
             LanguageFilter::class,
             SubCategoryFilter::class,
         ])->thenReturn();
-        return response()->json(['items' => $pipeline->skip($offset)->take($request->show)->get() , 'total' => $pipeline->count()]);
+        $count = $pipeline->count();
+        $items = $pipeline->skip($offset)->take($request->show)->get();
+        // dd($count); 
+        return response()->json(['items' => $items , 'total' => $count]);
     }
 
     public function create(AdminProductRequest $request)

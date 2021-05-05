@@ -18,7 +18,7 @@ class AuthorController extends Controller
         ];
         $validation = Validator::make($request->all(),$rules);
         if($validation->fails()){
-            return response()->json($validation->errors());
+            return response()->json($validation->errors() , 400);
         } 
         $author = Author::create($validation->validated());
         return response()->json($author);

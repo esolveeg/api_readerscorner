@@ -11,6 +11,8 @@ use App\Product;
 use App\QueryFilters\globals\BranchFilter;
 use App\QueryFilters\globals\ClosedFilter;
 use App\QueryFilters\globals\TypeFilter;
+use App\QueryFilters\documents\SearchFilter;
+use App\QueryFilters\documents\SearchIemFilter;
 use App\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
@@ -19,15 +21,33 @@ use Illuminate\Support\Facades\Validator;
 
 class DocumentController extends Controller
 {
-    public function get()
+    public function get(Request $request)
     {
-        $pipeline = app(Pipeline::class)->send(Document::query()->select(['documents.type' ,'documents.id' , 'users.name AS created_by' , 'documents.closed_at' , 'branches.name AS branch_name' , 'documents.created_by' , 'documents.created_at' , 'documents.updated_at' , 'documents.branch_id'])->join('users', 'created_by', '=', 'users.id')->join('branches', 'documents.branch_id', '=', 'branches.id')
-        ->orderBy('created_at', 'DESC'))->through([
-            ClosedFilter::class,
-            BranchFilter::class,
-            TypeFilter::class,
-        ])->thenReturn();
-        return response()->json($pipeline->get());
+        $request = handleListRequest($request);
+        $pipeline = app(Pipeline::class)->send(Document::query()->select(
+            [
+                'documents.type',
+                'documents.id',
+                'users.name AS created_by',
+                'documents.closed_at',
+                'branches.name AS branch_name',
+                'documents.created_at',
+                'documents.updated_at',
+                'documents.branch_id'
+            ])
+            ->join('users', 'created_by', '=', 'users.id')
+            ->leftJoin('branches', 'documents.branch_id', '=', 'branches.id')
+            ->orderBy('created_at', 'DESC'))->through([
+                ClosedFilter::class,
+                BranchFilter::class,
+                TypeFilter::class,
+                SearchFilter::class,
+            ])->thenReturn();
+        $count = $pipeline->count();
+        $items = $pipeline->skip($request->offset)->take($request->show)->get();
+        // dd($items);
+        // dd($count);
+        return response()->json(['items' => $items , 'total' => $count]);
     }
     public function find($id)
     {
@@ -47,7 +67,7 @@ class DocumentController extends Controller
         // set branch to use branch if there is one
         // return error if branch is required and not provided
         $branch = null;
-        if($request->type !== 6){
+        if($request->type !== 5){
             if($request->user()->branch_id){
                 $branch = $request->user()->branch_id;
             }else {
@@ -144,17 +164,27 @@ class DocumentController extends Controller
     }
     public function findItems(Request $request)
     {
-        $offset =   $request->show * ($request->page - 1);
-        $items = DB::select("SELECT
-                            SQL_CALC_FOUND_ROWS dp.id , p.title , p.isbn , dp.qty , dp.real_qty
-                            FROM document_product dp
-                            JOIN products p
-                                ON dp.product_id = p.id
-                            WHERE document_id = ?
-                            LIMIT ?
-                            OFFSET ?" , [$request->doc , $request->show , $offset]);
-        $count = DB::select("SELECT FOUND_ROWS() total")[0]->total;
-        // dd($count);
+        $request = handleListRequest($request);
+        
+        $pipeline = app(Pipeline::class)->send(DocumentProduct::query()->select(
+            [
+                'document_product.id',
+                'document_product.price',
+                'document_product.document_id',
+                'document_product.created_at',
+                'products.title',
+                'products.isbn',
+                'document_product.qty',
+                'document_product.real_qty',
+            ])
+            ->where('document_product.document_id' , $request->doc)
+            ->join('products', 'document_product.product_id', '=', 'products.id')
+            ->orderBy('created_at', 'DESC'))->through([
+                SearchIemFilter::class,
+            ])->thenReturn();
+        $count = $pipeline->count();
+        $items = $pipeline->skip($request->offset)->take($request->show)->get();
+        
 
         return response()->json(['items' => $items , 'total' => $count]);
     }
@@ -198,56 +228,17 @@ class DocumentController extends Controller
         return response()->json($document);
     }
 
-    private function insertProudct($request , $document){
-        // check if product type is define to apply create product function
-
-        //validate product request
-        $rules = [
-            "title" => "required|max:255",
-            "slug" => "required|max:255|unique:products",
-            "thumbnail" => "nullable",
-            "image" => "nullable",
-            "isbn" => "required|max:255|unique:products",
-            "description" => "nullable|max:255",
-            "author_id" => "nullable|max:255",
-            "language_id" => "nullable|max:255",
-            "age_id" => "nullable|max:255",
-            "price" => "required",
-            "old_price" => "nullable",
-            "website" => "nullable",
-        ];
-
-        
-        $validation = Validator::make($request->all(),$rules);
-    
-        if($validation->fails()){
-            return response()->json($validation->errors());
-        } 
-        $product = [];
-        foreach(array_keys($rules) as $prop){
-            $product[$prop] = $request[$prop];
-        }
-        $product['website'] = false;
-        $product = Product::create($product);
-        $item  = $this->insertDocProduct($product , $document);
-        // insert product categories
-        foreach($request->categories as $cat){
-            CategoryProduct::create([
-                'product_id' => $product->id,
-                'category_id' => $cat
-            ]);
-        }
-        return response()->json($item);
-
-    }
     public function insertDocItem(Request $request)
     {
+        //get document
         $document = Document::find($request->doc);
-        if($document->type === 6){
-            return $this->insertProudct($request , $document);
-        }
+        //[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : define , 6 : first balance] , (+ , -)[7 : transactions]]
+        //check if document type is define
+        // get the product
         $product = Product::where("isbn" , $request->product)->first();
+        // get product qty on the document branch
         $qty = getItemStock($product->id , $document->branch_id);
+        // get product desired  qty on the document branch
         $qtyTo =  $document->branch_to ? getItemStock($product->id , $document->branch_to) : null;
 
         $item  = $this->insertDocProduct($product , $document , $qty , $qtyTo);
@@ -256,7 +247,7 @@ class DocumentController extends Controller
     }
 
     private function insertDocProduct($product , $document , $qty = 0 , $qtyTo = 0){
-        
+
         // dd($qty);
         $item = DocumentProduct::where('product_id' , $product->id)->where('document_id' , $document->id)->first();
         if($item == null){

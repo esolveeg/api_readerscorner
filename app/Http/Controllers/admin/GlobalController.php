@@ -9,6 +9,7 @@ use App\Category;
 use App\Http\Controllers\Controller;
 use App\Language;
 use App\Product;
+use App\Role;
 use App\Stock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -24,6 +25,12 @@ class GlobalController extends Controller
         $branches = Branch::cacheFor(60 * 60 * 24)->select(['id'  , 'name'])->get();
         
         return response()->json($branches);
+    }
+    public function getRoles()
+    {
+        $roles = Role::cacheFor(60 * 60 * 24)->select(['id'  , 'name'])->get();
+        
+        return response()->json($roles);
     }
     public function deleteProucts(){
         $file = file_get_contents(public_path('system_products_other1.json'));
@@ -111,7 +118,7 @@ class GlobalController extends Controller
     
     public function getLanguages()
     {
-        $languages = Language::cacheFor(60 * 60 * 24)->select(['id'  , 'title'])->get();
+        $languages = Language::cacheFor(60 * 60 * 24)->select(['id'  , 'title' , 'slug'])->get();
         return response()->json($languages);
     }
 

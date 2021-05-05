@@ -58,6 +58,18 @@ if (! function_exists('getItemStocks')) {
         return $stock;
     }
 }
+if (! function_exists('handleListRequest')) {
+    function handleListRequest($req)
+    {
+        //extract all variables from the optoions param
+        $req->show = !isset($req->show) ? 10 : intval($req->show);
+        $req->page = !isset($req->page)  ? 1 : intval($req->page);
+        $offset =   $req->show * ($req->page - 1);
+        $req->offset = $offset;
+       
+        return $req;
+    }
+}
 if (! function_exists('addItemStock')) {
     function addItemStock($rec) {
         $stock = DB::select("SELECT id , `in` , `out` FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
