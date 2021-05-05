@@ -23,7 +23,7 @@ class AuthController extends Controller
         ];
         $user = User::where('email' , $request->email)->admin()->first();
         if(!$user){
-            return response()->json("this email is not found",400);
+            return response()->json([ "errors" => ['email' => ["this email is not found"]]],400);
         }
         $validator = Validator::make($request->all(), $rules);
         if($validator->fails()){
