@@ -8,15 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class Document extends Model
 {
     protected $guarded = [];
-    public function getCreatedAtAttribute($value)
-    {
-        return Carbon::parse($value)->diffForHumans();
-    }
-    public function getClosedAtAttribute($value)
-    {
-        if($value){
-            return Carbon::parse($value)->diffForHumans();
-        }
-        return null;
-    }
+    protected $casts = [
+        'created_at' => 'datetime:Y-m-d h:i:s',
+        'updated_at' => 'datetime:Y-m-d h:i:s',
+        'closed_at' => 'datetime:Y-m-d h:i:s'
+     ];
 }

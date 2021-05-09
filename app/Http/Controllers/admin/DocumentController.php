@@ -73,6 +73,10 @@ class DocumentController extends Controller
        $document->subtotal = $subtotal;
        $document->discount_value = $discountVal;
        $document->total = $subtotal - $discountVal;
+       $items = $this->loadItems($document->id);
+       $document->products = $items->get();
+       $document->created_by = User::find($document->created_by)->name;
+
 
         return response()->json($document);
     }
@@ -225,7 +229,15 @@ class DocumentController extends Controller
     {
         $request = handleListRequest($request);
         
-        $pipeline = app(Pipeline::class)->send(DocumentProduct::query()->select(
+        $pipeline = $this->loadItems($request->doc);
+        
+        $count = $pipeline->count();
+        $items = $pipeline->skip($request->offset)->take($request->show)->get();  
+        return response()->json(['items' => $items , 'total' => $count]);
+    }
+
+    private function loadItems($doc){
+        return app(Pipeline::class)->send(DocumentProduct::query()->select(
             [
                 'document_product.id',
                 'document_product.price',
@@ -237,16 +249,12 @@ class DocumentController extends Controller
                 'document_product.qty',
                 'document_product.branch_to_qty_current',
             ])
-            ->where('document_product.document_id' , $request->doc)
+            ->where('document_product.document_id' , $doc)
             ->join('products', 'document_product.product_id', '=', 'products.id')
             ->orderBy('created_at', 'DESC'))->through([
                 SearchIemFilter::class,
             ])->thenReturn();
-        $count = $pipeline->count();
-        $items = $pipeline->skip($request->offset)->take($request->show)->get();
-        
-
-        return response()->json(['items' => $items , 'total' => $count]);
+       
     }
 
     public function attachAccount($id , Request $request)
