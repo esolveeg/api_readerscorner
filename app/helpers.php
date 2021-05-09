@@ -46,7 +46,8 @@ if (! function_exists('extractTitleFromAddress')) {
 }
 if (! function_exists('getItemStock')) {
     function getItemStock($product , $branch) {
-        $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id" , [$product , $branch]);
+        $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id = ?" , [$product , $branch]);
+        // dd($stock);
         return isset($stock[0]) ? $stock[0]->qty : 0;
 
     }
@@ -72,7 +73,9 @@ if (! function_exists('handleListRequest')) {
 }
 if (! function_exists('addItemStock')) {
     function addItemStock($rec) {
-        $stock = DB::select("SELECT id , `in` , `out` FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
+        $stock = getItemStock($rec['product'] , $rec['branch']);
+        // $stock = DB::select("SELECT id , `in` , `out` FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
+
         if(isset($stock[0])){
             if(isset($rec['in'])){
                 $qty = $rec['in'] + $stock[0]->in;
@@ -89,6 +92,7 @@ if (! function_exists('addItemStock')) {
             } else {
                 $rec['in'] = 0;
             }
+
             DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , $rec['out']]);
         }
     }

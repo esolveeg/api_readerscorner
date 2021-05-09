@@ -13,7 +13,10 @@ use App\QueryFilters\globals\ClosedFilter;
 use App\QueryFilters\globals\TypeFilter;
 use App\QueryFilters\documents\SearchFilter;
 use App\QueryFilters\documents\SearchIemFilter;
+use App\QueryFilters\globals\FromFilter;
+use App\QueryFilters\globals\ToFilter;
 use App\Stock;
+use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\DB;
@@ -35,12 +38,15 @@ class DocumentController extends Controller
                 'documents.updated_at',
                 'documents.branch_id'
             ])
+            ->where('documents.type' , $request->type)
             ->join('users', 'created_by', '=', 'users.id')
             ->leftJoin('branches', 'documents.branch_id', '=', 'branches.id')
             ->orderBy('created_at', 'DESC'))->through([
                 ClosedFilter::class,
                 BranchFilter::class,
                 TypeFilter::class,
+                FromFilter::class,
+                ToFilter::class,
                 SearchFilter::class,
             ])->thenReturn();
         $count = $pipeline->count();
@@ -49,15 +55,51 @@ class DocumentController extends Controller
         // dd($count);
         return response()->json(['items' => $items , 'total' => $count]);
     }
+
     public function find($id)
     {
        $document = Document::find($id);
+       $subtotal = DB::select("SELECT SUM(price * qty) subtotal FROM document_product WHERE document_id = ? " ,[ $document->id])[0]->subtotal;
+       $discountVal = 0;
+       //check if discount value is set 
+       if($document->discount_value != null && $subtotal !== null){
+           $discountVal = $document->discount_value;
+        //check if discount percent is set
+       } else if($document->discount_percent != null && $subtotal !== null){
+           //calculate discount value with discount percent
+           $discountVal = $document->discount_percent * $subtotal / 100;
+        }
+        // dd($discountVal);
+       $document->subtotal = $subtotal;
+       $document->discount_value = $discountVal;
+       $document->total = $subtotal - $discountVal;
+
         return response()->json($document);
+    }
+
+    public function createReturn(Request $request)
+    {
+        $document = Document::where('closed_at' , '!=' , null)->where('type' , $request->type)->where('id' , $request->document);
+        if($request->user()->branch_id !== null){
+            $document = $document->where('branch_id' , $request->user()->branch_id);
+        }
+        $document = $document->first();
+        if($document == null){
+            return response()->json('no document with this id' , 400);
+        }
+        $type = $request->type == 0 ? 3 : 1;
+        $rec = [
+            "created_by" => $request->user()->id,
+            "branch_id" => $document->branch_id,
+            "document_id" => $document->id,
+            "type" => $type,
+        ];
+        $newDocument = Document::create($rec);
+        return response()->json($newDocument);
     }
 
     public function create(Request $request)
     {
-        // [(-)[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : define , 6 : first balance] , (+ , -)[7 : transactions]]
         // validate doc type is required
         if(!isset($request->type)){
             return response()->json('type is required' , 400);
@@ -71,26 +113,61 @@ class DocumentController extends Controller
             if($request->user()->branch_id){
                 $branch = $request->user()->branch_id;
             }else {
-                if(!$request->branch){
+                if(!$request->branch_id){
                     return response()->json('branch is required' , 400);
                 }
-                $branch = $request->branch;
+                $branch = $request->branch_id;
             }
         }
         // validate that to branch is required && it's required onlyt on transactions documents
         // set branch to use branch if there is one
         // return error if branch is required and not provided
         if($request->type === 7 && !$request->branch_to){
-            return response()->json('branch is required' , 400);
+            return response()->json('branch to is required' , 400);
+        }
+
+        //check if document is first balance to reset stock on the document branch
+        if($request->type == 6){
+            DB::delete("DELETE FROM stock WHERE branch_id" , [$request->branch_id]);
         }
 
         $document = Document::create([
             "created_by" => $request->user()->id,
-            "account_id" => $request->account,
+            "account_id" => $request->account_id,
             "branch_to" => $request->branch_to,
             "type" => $request->type,
+            "discount_percent" => $request->discount_percent,
             "branch_id" => $branch
         ]);
+        return response()->json($document);
+    }
+    public function update(Request $request , $doc)
+    {
+
+        // validate that branch is required
+        // execlude the define document from requiring branch beacause he dosn't need it
+        // set branch to use branch if there is one
+        // return error if branch is required and not provided
+        $document = Document::find($doc);
+        if($document->type !== 5){
+            if($request->user()->branch_id){
+                $request->merge([
+                    'branch_id' => $request->user()->branch_id
+                ]);
+            }else {
+                if(!$request->branch_id){
+                    return response()->json('branch is required' , 400);
+                }
+            }
+        }
+        // validate that to branch to is required && it's required onlyt on transactions documents
+        // set branch to use branch if there is one
+        // return error if branch is required and not provided
+        if($document->type === 7 && !$request->branch_to){
+            return response()->json('branch to is required' , 400);
+        }
+
+        $document->update($request->except(['doc' , 'type' , 'discount_value' , 'created_at' , 'closed_at']));
         return response()->json($document);
     }
 
@@ -98,69 +175,51 @@ class DocumentController extends Controller
     public function close($id)
     {
         $document = Document::find($id);
-        $items = DB::select("SELECT dp.qty , dp.real_qty , dp.product_id FROM document_product dp WHERE document_id = ?" , [$id]);
+        $items = DocumentProduct::where('document_id' , $id)->get();
+        if(count($items) == 0){
+            return response()->json('document has no items' , 400);
 
+        }
         foreach($items as $item){
+            //reflect stock change to sync
+            $item->qty_current = getItemStock($item->product_id , $document->branch_id);
+            $item->save();
+            
             $rec = [
                 "product" => $item->product_id,
                 "branch" => $document->branch_id,
-
             ];
-            // dd($document->type < 6  && $document->type >= 4);
-            switch (true) {
-                case $document->type <2:
-                   $rec['out'] = $item->qty;
-                    break;
-
-                case $document->type < 4 && $document->type >= 2:
-                    $rec['in'] = $item->qty;
-                    break;
-                case $document->type < 6  && $document->type >= 4:
-                    $rec['in'] = $item->qty ;
-                    defineItemStock($rec);
-                    break;
-
-                case $document->type == 7:
-                    $rec['out'] = $item->qty ;
-                    $toRec = [
-                        "product" => $item->product_id,
-                        "branch" => $document->branch_to,
-                        "in" => $item->qty,
-                    ];
-                    addItemStock($toRec);
-                    break;
-                 default:
-
-                    break;
+            //check if doc type is sell or buy return to perform minus
+            if($document->type <= 1){
+                $rec['out'] = $item->qty;
+            } 
+            //check if doc type is buy or sell return to perform plus
+            if($document->type >= 2 && $document->type <= 3){
+                $rec['in'] = $item->qty;
             }
 
-            // dd($rec);
-            //check if document type is sell or buy return
-            // if($document->type < 2){
-            //     $rec['out'] = $item->qty ;
-            //     //check if document type is buy or sell return
-            // }else if($document->type < 4 && $document->type > 1){
-            //     $rec['in'] = $item->qty;
-            //     //check if document type is inventory or define or first balance
-            // } else if($document->type < 6  && $document->type > 3){
-            //     $rec['in'] = $item->qty ;
-            //     defineItemStock($rec);
-            //     //chec if document type is transaction
-            // } else {
-            //     $rec['out'] = $item->qty ;
-            //     $toRec = [
-            //         "product_id" => $item->product_id,
-            //         "branch_id" => $document->branch_to,
-            //         "in" => $item->qty,
-            //     ];
-            //     addItemStock($toRec);
-            // }
+            //check if doc type is inventory or define or first balance 
+            if($document->type >= 4 && $document->type <= 6){
+                $rec['in'] = $item->qty ;
+                defineItemStock($rec);
+            }
+
+            //check if doc type is transaction
+            if($document->type == 7){
+                $toRec = [
+                    "product" => $item->product_id,
+                    "branch" => $document->branch_to,
+                    "in" => $item->qty,
+                ];
+                addItemStock($toRec);
+            }
             //execlude inventory & define & first balance to add stock
-            ($document->type < 6  && $document->type >= 4) ? '' : addItemStock($rec);
+            ($document->type < 6  && $document->type >= 4) ? '' : addItemStock($rec);           
         }
         $document->closed_at = now();
         $document->save();
-        return response()->json("stock updated successfully");
+        $document->products = $items;
+        return response()->json($items);
     }
     public function findItems(Request $request)
     {
@@ -174,8 +233,9 @@ class DocumentController extends Controller
                 'document_product.created_at',
                 'products.title',
                 'products.isbn',
+                'document_product.qty_current',
                 'document_product.qty',
-                'document_product.real_qty',
+                'document_product.branch_to_qty_current',
             ])
             ->where('document_product.document_id' , $request->doc)
             ->join('products', 'document_product.product_id', '=', 'products.id')
@@ -228,57 +288,62 @@ class DocumentController extends Controller
         return response()->json($document);
     }
 
+    public function findItem($id)
+    {
+        return DocumentProduct::find($id);
+    }
+
     public function insertDocItem(Request $request)
     {
         //get document
         $document = Document::find($request->doc);
-        //[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : define , 6 : first balance] , (+ , -)[7 : transactions]]
-        //check if document type is define
         // get the product
-        $product = Product::where("isbn" , $request->product)->first();
-        // get product qty on the document branch
-        $qty = getItemStock($product->id , $document->branch_id);
-        // get product desired  qty on the document branch
-        $qtyTo =  $document->branch_to ? getItemStock($product->id , $document->branch_to) : null;
-
-        $item  = $this->insertDocProduct($product , $document , $qty , $qtyTo);
-
-        return response()->json($item);
-    }
-
-    private function insertDocProduct($product , $document , $qty = 0 , $qtyTo = 0){
-
-        // dd($qty);
+        $product = Product::where("isbn" , $request->isbn)->first();
+        //cueck if document is not define products to set quantites
         $item = DocumentProduct::where('product_id' , $product->id)->where('document_id' , $document->id)->first();
-        if($item == null){
-            $rec = [
-                "product_id" => $product->id,
-                "document_id" => $document->id,
-                "price" => $product->price,
-                "old_price" => $product->old_price,
-                "qty" => $qty,
-                "real_qty" => $qty,
-                "real_qty_to" => $qtyTo,
-            ];
-            DocumentProduct::insert([$rec]);
-        }else {
-            $item->qty = $item->qty + $qty;
+        if($item !== null ){
+            $item->qty = $item->qty + $request->qty;
             $item->save();
+            return $item;
         }
-        $item = [
-            "isbn" => $product->isbn,
-            "title" => $product->title,
+        //define qty current to null
+        $qtyCurrent = null;
+        $branchToQtyCurrent = null;
+        if($document->type !== 5){
+            //validate qty is required if doc dosnt define products
+            if(!isset($request->qty)){
+                return response()->json('quantity is required' , 400);
+            }
+            $qtyCurrent = getItemStock($product->id , $document->branch_id);
+        }
+        //check if doc type is transaction
+        if($document->type == 7){
+            $branchToQtyCurrent = getItemStock($product->id , $document->branch_to);
+        }
+
+        $rec = [
+            "product_id" => $product->id,
+            "document_id" => $document->id,
             "price" => $product->price,
+            "old_price" => $product->old_price,
+            "qty_current" => $qtyCurrent,
+            "qty" => $request->qty,
+            "branch_to_qty_current" => $branchToQtyCurrent,
         ];
-        return $item;
+        //get item in case it existed
+        
+        $rec = DocumentProduct::insert([$rec]);
+        
+        return response()->json($rec);
     }
+
+   
 
     public function updateQty($id , $qty)
     {
-        // dd($qty);
         $record = DocumentProduct::find($id);
         $record->qty = $qty;
         $record->save();
-        return response()->json($record->document_id);
+        return response()->json($record);
     }
 }

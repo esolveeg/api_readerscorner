@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\admin;
 
+use App\Account;
 use App\Age;
 use App\Author;
 use App\Branch;
@@ -31,6 +32,18 @@ class GlobalController extends Controller
         $roles = Role::cacheFor(60 * 60 * 24)->select(['id'  , 'name'])->get();
         
         return response()->json($roles);
+    }
+    
+
+    public function suppliers()
+    {
+        $supplies = Account::where('type' , 1)->get();
+        return response()->json($supplies);
+    }
+    public function customers()
+    {
+        $customers = Account::where('type' , 0)->get();
+        return response()->json($customers);
     }
     public function deleteProucts(){
         $file = file_get_contents(public_path('system_products_other1.json'));
@@ -124,7 +137,7 @@ class GlobalController extends Controller
 
     public function getAges()
     {
-        $ages = Age::cacheFor(60 * 60 * 24)->select(['id'  , 'title'])->get();
+        $ages = Age::cacheFor(60 * 60 * 24)->select(['id'  , 'title' , 'slug'])->get();
         return response()->json($ages);
     }
 

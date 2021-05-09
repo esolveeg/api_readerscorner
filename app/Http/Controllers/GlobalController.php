@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Account;
 use App\Age;
 use App\Branch;
 use App\CategoryProduct;
@@ -22,11 +23,12 @@ class GlobalController extends Controller
         return response()->json('Deleted Sucessfully');
 
     }
-    public function ages()
-    {
-        $ages = Age::all();
-        return response()->json($ages);
+   
 
+    public function customers()
+    {
+        $supplies = Account::where('type' , 0)->get();
+        return response()->json($supplies);
     }
 
 

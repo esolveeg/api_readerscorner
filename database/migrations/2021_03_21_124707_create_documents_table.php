@@ -27,11 +27,15 @@ class CreateDocumentsTable extends Migration
             $table->unsignedBigInteger('branch_to')->nullable();
             $table->foreign('branch_to')->references('id')->on('branches')->onDelete('set null');
 
+            $table->unsignedBigInteger('document_id')->nullable();
+            $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null');
+
             $table->smallInteger('type')->comment('[(-)[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : define , 6 : first balance] , (+ , -)[7 : transactions]]');
 
             $table->unsignedFloat('discount_value')->nullable();
             $table->unsignedInteger('discount_percent')->nullable();
             
+            $table->enum('payment' , ['cod' , 'cash']);
             $table->dateTime('closed_at')->nullable();
             $table->unsignedFloat('total')->nullable();
             $table->unsignedFloat('subtotal')->nullable();

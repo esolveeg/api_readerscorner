@@ -23,9 +23,9 @@ class CreateDocumentProductTable extends Migration
 
             $table->unsignedFloat('price');
             $table->unsignedFloat('old_price')->nullable();
+            $table->tinyInteger('qty_current');
             $table->unsignedTinyInteger('qty')->default(1);
-            $table->tinyInteger('real_qty');
-            $table->tinyInteger('real_qty_to')->nullable();
+            $table->tinyInteger('branch_to_qty_current')->nullable();
             
             $table->timestamps();
         });
