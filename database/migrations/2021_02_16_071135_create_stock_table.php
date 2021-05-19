@@ -24,6 +24,7 @@ class CreateStockTable extends Migration
             $table->tinyInteger('in');
             $table->tinyInteger('out');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

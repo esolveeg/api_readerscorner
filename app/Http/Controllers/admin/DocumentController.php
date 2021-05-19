@@ -210,6 +210,7 @@ class DocumentController extends Controller
 
             //check if doc type is transaction
             if($document->type == 7){
+                $rec['out'] = $item->qty;
                 $toRec = [
                     "product" => $item->product_id,
                     "branch" => $document->branch_to,
