@@ -205,7 +205,9 @@ class DocumentController extends Controller
             //check if doc type is inventory or define or first balance 
             if($document->type >= 4 && $document->type <= 6){
                 $rec['in'] = $item->qty ;
-                defineItemStock($rec);
+                if($document->type !== 5){
+                    defineItemStock($rec);
+                }
             }
 
             //check if doc type is transaction
@@ -310,14 +312,20 @@ class DocumentController extends Controller
         $product = Product::where("isbn" , $request->isbn)->first();
         //cueck if document is not define products to set quantites
         $item = DocumentProduct::where('product_id' , $product->id)->where('document_id' , $document->id)->first();
+        // dd($product);
         if($item !== null ){
+            // dd('hi');
+            if($document->type >= 4 && $document->type <= 6){
+                $item->qty = $request->qty;
+                return $item;
+            }
             $item->qty = $item->qty + $request->qty;
             $item->save();
             return $item;
         }
         //define qty current to null
-        $qtyCurrent = null;
-        $branchToQtyCurrent = null;
+        $qtyCurrent = 0;
+        $branchToQtyCurrent = 0;
         if($document->type !== 5){
             //validate qty is required if doc dosnt define products
             if(!isset($request->qty)){
