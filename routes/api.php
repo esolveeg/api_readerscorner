@@ -73,10 +73,42 @@ Route::middleware('cors:api')->group(function (){
 				Route::get('/','OrderController@get');
 				Route::put('/update-status/{id}','OrderController@updateStatus');
 			});
+			Route::prefix('branches')->group(function () {
+				Route::get('/list','BranchController@get');
+				Route::get('/find/{id}','BranchController@find');
+				Route::post('/create','BranchController@create');
+				Route::put('/edit/{id}','BranchController@update');
+			});
+			Route::prefix('documents')->group(function () {
+				Route::get('/','DocumentController@get');
+				Route::get('/find/{id}','DocumentController@find');
+				Route::get('/find/items/{id}','DocumentController@findWithItems');
+				Route::get('/item/{id}','DocumentController@findItem');
+				Route::post('/','DocumentController@create');
+				Route::post('/return','DocumentController@createReturn');
+				Route::put('/{id}/close','DocumentController@close');
+				Route::get('/items','DocumentController@findItems');
+				Route::put('/edit/{id}','DocumentController@update');
+				Route::put('/{id}/account','DocumentController@attachAccount');
+				Route::put('/{id}/account/detach','DocumentController@detachAccount');
+				Route::put('/{id}/discount','DocumentController@attachDiscount');
+				Route::put('/{id}/discount/detach','DocumentController@detachDiscount');
+				Route::post('/insert','DocumentController@insertDocItem');
+				Route::put('/{id}/{qty}/qty','DocumentController@updateQty');
+			});
 			Route::prefix('user')->group(function () {
 				Route::get('/','UserController@me');
+				Route::get('/list','UserController@get');
 				Route::any('/logout','UserController@logout');
 
+			});
+			Route::prefix('products')->group(function () {
+				Route::post('/','ProductController@create');
+				Route::put('/edit/{id}','ProductController@update');
+				Route::get('/','ProductController@get');
+				Route::get('/find/isbn/{isbn}','ProductController@findByIsbn');
+				Route::get('/find/id/{id}','ProductController@findById');
+				Route::get('/find/{slug}','ProductController@find');
 			});
 			Route::prefix('inventories')->group(function () {
 				Route::get('/','InventoryController@get');
@@ -87,12 +119,26 @@ Route::middleware('cors:api')->group(function (){
 				Route::put('/close/{id}','InventoryController@close');
 				Route::post('/add','InventoryController@insertItem');
 			});
+			Route::prefix('authors')->group(function () {
+				Route::get('/','AuthorController@get');
+				Route::get('/{id}','AuthorController@find');
+				Route::post('/','AuthorController@create');
+				Route::put('/{id}','AuthorController@update');
+				Route::delete('/{id}','AuthorController@delete');
+			});
 			Route::get('/languages','GlobalController@getLanguages');
+			Route::get('/customers','GlobalController@customers');
+			Route::get('/suppliers','GlobalController@suppliers');
+			Route::get('/authors','GlobalController@getAuthors');
+			Route::post('/insert/products','GlobalController@insertProucts');
+			Route::delete('/delete/products','GlobalController@deleteProucts');
+			
 			Route::get('/categories','GlobalController@getCategories');
+			Route::get('/categories/tree','GlobalController@getCategoriesTree');
 			Route::get('/ages','GlobalController@getAges');
 			Route::get('/branches','GlobalController@getBranhces');
+			Route::get('/roles','GlobalController@getRoles');
 			Route::get('/product/{isbn}','GlobalController@findItem');
-			Route::get('/products','ProductController@get');
 			Route::delete('/delete/{table}/{id}','GlobalController@delete');
 		});
 

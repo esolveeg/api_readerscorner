@@ -6,7 +6,6 @@ use App\CategoryProduct;
 use App\data\Adult;
 use App\data\Kids;
 use App\Price;
-use App\Key;
 use App\Product;
 use App\ProductFail;
 use App\Stock;
@@ -19,13 +18,11 @@ Route::get('/clonedb', function () {
   return response()->json('success');
 });
 Route::get('/test' , function() {
-	$products = Product::take(10)->where('thumbnail' , '!=' , null)->get();
-	foreach($products as $product){
-	    keyProduct::create([
-                'product_id' => $product,
-                'key_id' => 1,
-            ]);
-	}
+  $user = \App\User::where('email' , 'point@readerscorner.co')->first();
+  $user->admin = 1;
+  $user->branch_id = 4;
+  $user->role_id = 3;
+  $user->save();
 });
 Route::get('/fix-prices', function () {
   $kids =new  Kids;

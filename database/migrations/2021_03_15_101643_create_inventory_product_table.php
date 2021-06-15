@@ -22,7 +22,7 @@ class CreateInventoryProductTable extends Migration
             $table->foreign('inventory_id')->references('id')->on('inventories')->onDelete('cascade');
 
             $table->tinyInteger('qty')->default(1);
-            $table->tinyInteger('real_qty')->default(1);
+            $table->tinyInteger('real_qty');
             $table->timestamps();
         });
     }

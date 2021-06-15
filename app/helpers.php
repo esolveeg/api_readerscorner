@@ -5,6 +5,8 @@ use App\City;
 use App\Coupon;
 use App\Product;
 use App\ProductFail;
+use App\Stock;
+use App\StockHistory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -44,18 +46,68 @@ if (! function_exists('extractTitleFromAddress')) {
 }
 if (! function_exists('getItemStock')) {
     function getItemStock($product , $branch) {
-        $qty = DB::select("SELECT 
-                s.qty 
-                FROM stock s
-                WHERE s.product_id = ?
-                AND s.branch_id = ?
-            " , [$product , $branch]);
-        return isset($qty[0]) ? $qty[0]->qty : 0;
+        $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id = ?" , [$product , $branch]);
+        // dd($stock);
+        return isset($stock[0]) ? $stock[0]->qty : 0;
 
     }
 }
 
+if (! function_exists('getItemStocks')) {
+    function getItemStocks($product) {
+      $stock =  DB::select("SELECT * FROM stockView  WHERE product_id = ?" , [$product]);
+        return $stock;
+    }
+}
+if (! function_exists('handleListRequest')) {
+    function handleListRequest($req)
+    {
+        //extract all variables from the optoions param
+        $req->show = !isset($req->show) ? 10 : intval($req->show);
+        $req->page = !isset($req->page)  ? 1 : intval($req->page);
+        $offset =   $req->show * ($req->page - 1);
+        $req->offset = $offset;
+       
+        return $req;
+    }
+}
+if (! function_exists('addItemStock')) {
+    function addItemStock($rec) {
+        isset($rec['in']) ? '' : $rec['in'] = 0;
+        isset($rec['out']) ? '' : $rec['out'] = 0;
+        DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , $rec['out']]);
+        //     $stock = DB::select("SELECT * FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
+        // // check if item is already has stock on the doc branch
+        // if(isset($stock[0])){
+        //     // check if doc is buy or sell return
+        //     if(isset($rec['in'])){
+        //         $qty = $rec['in'] + $stock[0]->in;
+        //         // dd($qty);
+        //         DB::update('UPDATE stock s SET s.in = ?  WHERE id =? ' , [ $qty ,$rec['product']]);
+        //     } else {
+        //         // check if doc is sell or buy return
+        //         $qty = $rec['out'] + $stock[0]->out;
+        //         // dd(DB::select("SELECT * FROM stock s WHERE id = ? " , [$stock[0]->id]));
+        //         DB::update('UPDATE stock s SET s.out = ?  WHERE id =? ' , [ $qty ,$rec['product']]);
+        //     }
+        // } else {
+        //     // check if doc is buy or sell return
+        //     if(isset($rec['in'])){
+        //         $rec['out'] = 0;
+        //         // check if doc is sell or buy return
+        //     } else {
+        //         $rec['in'] = 0;
+        //     }
 
+        // }
+    }
+}
+if (! function_exists('defineItemStock')) {
+    function defineItemStock($rec) {
+            DB::update("UPDATE  stock SET deleted_at = ? WHERE  product_id = ? AND branch_id = ? " , [now() , $rec['product'] , $rec['branch']]);
+            DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , 0]);
+    }
+}
 if (! function_exists('getFromGoogle')) {
     function getFromGoogle($isbn) {
         $product = Product::where('isbn' , $isbn)->first();
