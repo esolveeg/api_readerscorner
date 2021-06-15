@@ -48,7 +48,7 @@ if (! function_exists('getItemStock')) {
     function getItemStock($product , $branch) {
         $stock = DB::select("SELECT * FROM stockView  WHERE product_id = ? AND branch_id = ?" , [$product , $branch]);
         // dd($stock);
-        return isset($stock[0]) ? $stock[0]->qty : 0;
+        return isset($stock[0]) ? (int) $stock[0]->qty : 0;
 
     }
 }
@@ -104,7 +104,11 @@ if (! function_exists('addItemStock')) {
 }
 if (! function_exists('defineItemStock')) {
     function defineItemStock($rec) {
+        
+        // $stock = Stock::where('product_id' , $rec['product'])->where('branch_id' , $rec['branch'])->get();
+        // dd($rec , $stock);
             DB::update("UPDATE  stock SET deleted_at = ? WHERE  product_id = ? AND branch_id = ? " , [now() , $rec['product'] , $rec['branch']]);
+            // dd(DB::select("SELECT  * from stock  " ));
             DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , 0]);
     }
 }
