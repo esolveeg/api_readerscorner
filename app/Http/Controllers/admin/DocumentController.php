@@ -104,6 +104,7 @@ class DocumentController extends Controller
 
     public function create(Request $request)
     {
+        
         // validate doc type is required
         if(!isset($request->type)){
             return response()->json('type is required' , 400);
@@ -132,7 +133,7 @@ class DocumentController extends Controller
 
         //check if document is first balance to reset stock on the document branch
         if($request->type == 6){
-            DB::delete("DELETE FROM stock WHERE branch_id" , [$request->branch_id]);
+            DB  ::delete("DELETE FROM stock WHERE branch_id" , [$request->branch_id]);
         }
 
         $document = Document::create([

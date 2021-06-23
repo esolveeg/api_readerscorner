@@ -101,16 +101,16 @@ class ProductSeeder extends Seeder
             defineItemStock($rec);
           }
       }}
-      $file = file_get_contents(public_path('products_fail.json'));
-      $catProduct = json_decode($file);
-      $chunks = array_chunk($catProduct , 500);
-      foreach($chunks as $chunk){
-        foreach($chunk as $rec){
-          $rec = [
-            'isbn' => $rec->isbn,
-          ];
-        }
-        ProductFail::create($rec);
-      }
+      // $file = file_get_contents(public_path('products_fail.json'));
+      // $catProduct = json_decode($file);
+      // $chunks = array_chunk($catProduct , 500);
+      // foreach($chunks as $chunk){
+      //   foreach($chunk as $rec){
+      //     $rec = [
+      //       'isbn' => $rec->isbn,
+      //     ];
+      //   }
+      //   ProductFail::create($rec);
+      // }
     }
 }
