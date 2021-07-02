@@ -30,7 +30,7 @@ class CreateDocumentsTable extends Migration
             $table->unsignedBigInteger('document_id')->nullable();
             $table->foreign('document_id')->references('id')->on('documents')->onDelete('set null');
 
-            $table->smallInteger('type')->comment('[(-)[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : define , 6 : first balance] , (+ , -)[7 : transactions]]');
+            $table->smallInteger('type')->comment('[(-)[0 : sell , 1 : buy return  ] , (+)[2 : buy , 3 : sell return ], (=)[4 : inventory , 5 : first balance] , (+ , -)[6 : transactions]]');
 
             $table->unsignedFloat('discount_value')->nullable();
             $table->unsignedInteger('discount_percent')->nullable();

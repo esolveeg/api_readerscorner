@@ -20,19 +20,19 @@ class DatabaseSeeder extends Seeder
 
     // DB::unprepared('');
         $this->call([
-            RoleSeeder::class,
-            BranchSeeder::class,
-            CitySeeder::class,
-            UserSeeder::class,
-            CategorySeeder::class,
-            AgeSeeder::class,
-            LanguageSeeder::class,
-            CouponSeeder::class,
-            AuthorSeeder::class,
-            ProductSeeder::class,
-            KeySeeder::class,
-            KeyProductSeeder::class,
-            SliderSeeder::class,
+            // RoleSeeder::class,
+            // BranchSeeder::class,
+            // CitySeeder::class,
+            // UserSeeder::class,
+            // CategorySeeder::class,
+            // AgeSeeder::class,
+            // LanguageSeeder::class,
+            // CouponSeeder::class,
+            // AuthorSeeder::class,
+            // ProductSeeder::class,
+            // KeySeeder::class,
+            // KeyProductSeeder::class,
+            // SliderSeeder::class,
             AccountSeeder::class,
         ]);
     }

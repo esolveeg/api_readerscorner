@@ -138,7 +138,7 @@ class ProductController extends Controller
             'author_id' => $this->createAuthor($request->author_id)
         ]);
         //uodate the product
-        $product->update($request->except('categories'));
+        $product->update($request->except(['categories' , 'stock' , 'language' , 'age' , 'author']));
         //delete all cateogires
         DB::delete("DELETE FROM category_product WHERE product_id = ?" ,[$id]);
         // insert the new categories
