@@ -100,6 +100,7 @@ class ProductController extends Controller
         $branches = Branch::select(['id' , 'name'])->get();
         $stocks = [];
         foreach($branches as $branch){
+            getItemStock($id , 4);
             $stock = ['branch' => $branch->name ,'qty' => getItemStock($id , $branch->id)];
             array_push($stocks , $stock);
         }

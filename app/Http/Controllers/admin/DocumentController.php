@@ -229,6 +229,7 @@ class DocumentController extends Controller
                     "branch" => $document->branch_to,
                     "in" => $item->qty,
                 ];
+                // dd($toRec);
                 addItemStock($toRec);
             }
 

@@ -76,6 +76,7 @@ if (! function_exists('addItemStock')) {
         isset($rec['in']) ? '' : $rec['in'] = 0;
         isset($rec['out']) ? '' : $rec['out'] = 0;
         DB::insert("INSERT INTO stock (product_id,branch_id,`in` , `out`) VALUES (? , ? , ? , ?) " , [$rec['product'] , $rec['branch'] , $rec['in'] , $rec['out']]);
+        // dd($rec);
         //     $stock = DB::select("SELECT * FROM stock  WHERE product_id = ? AND branch_id = ?" , [$rec['product'] , $rec['branch']]);
         // // check if item is already has stock on the doc branch
         // if(isset($stock[0])){
@@ -104,7 +105,7 @@ if (! function_exists('addItemStock')) {
 }
 if (! function_exists('defineItemStock')) {
     function defineItemStock($rec) {
-        
+        // dd($rec);
         // $stock = Stock::where('product_id' , $rec['product'])->where('branch_id' , $rec['branch'])->get();
         // dd($rec , $stock);
             DB::update("UPDATE  stock SET deleted_at = ? WHERE  product_id = ? AND branch_id = ? " , [now() , $rec['product'] , $rec['branch']]);
