@@ -18,6 +18,8 @@ class BranchSeeder extends Seeder
             ["name" =>'uptown cairo'],
             ["name" =>'point 90'],
             ["name" =>'Arkan mall'],
+            ["name" =>'marasi'],
+            ["name" =>'lavista'],
         ];
         Branch::insert($branches);
     }
